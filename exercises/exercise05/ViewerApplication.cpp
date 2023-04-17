@@ -49,6 +49,7 @@ void ViewerApplication::Update()
     UpdateCamera();
 
     // Update specular exponent for grass material
+    m_model.GetMaterial(2).SetUniformValue("SpecularExponent", m_specularExponentGrass);
     m_model.GetMaterial(1).SetUniformValue("SpecularExponent", m_specularExponentGrass);
 
     m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
