@@ -1,4 +1,3 @@
-#version 330 core
 
 in vec3 WorldPosition;
 in vec3 WorldNormal;
@@ -12,5 +11,10 @@ uniform vec2 ColorTextureScale;
 
 void main()
 {
-	FragColor = Color * texture(ColorTexture, TexCoord * ColorTextureScale);
+	float pixelationLevel = 240.0f;
+
+	//pixelate    
+	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
+
+	FragColor = Color * texture(ColorTexture, roundedTexCoord * ColorTextureScale);
 }
