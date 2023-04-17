@@ -4,6 +4,7 @@
 #include <ituGL/asset/ModelLoader.h>
 #include <ituGL/asset/Texture2DLoader.h>
 #include <ituGL/shader/Material.h>
+#include <ituGL/geometry/VertexFormat.h>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/transform.hpp>
 #include <imgui.h>
@@ -49,6 +50,8 @@ void ViewerApplication::Update()
 
     // Update specular exponent for grass material
     m_model.GetMaterial(1).SetUniformValue("SpecularExponent", m_specularExponentGrass);
+
+    m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
 }
 
 void ViewerApplication::Render()
@@ -60,8 +63,105 @@ void ViewerApplication::Render()
 
     m_model.Draw();
 
+    DrawWater();
+
     // Render the debug user interface
     RenderGUI();
+}
+
+void ViewerApplication::DrawWater() {
+    
+    float scale = 20.0f;
+
+    DrawObject(m_terrainPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, 2.5f, 0.0f)) * glm::scale(glm::vec3(scale)));
+    DrawObject(m_terrainPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, 2.5f, 0.0f)) * glm::scale(glm::vec3(scale)));
+    DrawObject(m_terrainPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, 2.5f, -scale)) * glm::scale(glm::vec3(scale)));
+    DrawObject(m_terrainPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, 2.5f, -scale)) * glm::scale(glm::vec3(scale)));
+
+}
+
+void ViewerApplication::DrawObject(const Mesh& mesh, Material& material, const glm::mat4& worldMatrix)
+{
+    material.Use();
+
+    ShaderProgram& shaderProgram = *material.GetShaderProgram();
+
+    ShaderProgram::Location locationWorldMatrix = shaderProgram.GetUniformLocation("WorldMatrix");
+    material.GetShaderProgram()->SetUniform(locationWorldMatrix, worldMatrix);
+
+    ShaderProgram::Location locationViewProjMatrix = shaderProgram.GetUniformLocation("ViewProjMatrix");
+    material.GetShaderProgram()->SetUniform(locationViewProjMatrix, m_camera.GetViewProjectionMatrix());
+
+    mesh.DrawSubmesh(0);
+}
+
+
+void ViewerApplication::CreateTerrainMesh(Mesh& mesh, unsigned int gridX, unsigned int gridY)
+{
+    // Define the vertex structure
+    struct Vertex
+    {
+        Vertex() = default;
+        Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2 texCoord)
+            : position(position), normal(normal), texCoord(texCoord) {}
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
+    };
+
+    // Define the vertex format (should match the vertex structure)
+    VertexFormat vertexFormat;
+    vertexFormat.AddVertexAttribute<float>(3);
+    vertexFormat.AddVertexAttribute<float>(3);
+    vertexFormat.AddVertexAttribute<float>(2);
+
+    // List of vertices (VBO)
+    std::vector<Vertex> vertices;
+
+    // List of indices (EBO)
+    std::vector<unsigned int> indices;
+
+    // Grid scale to convert the entire grid to size 1x1
+    glm::vec2 scale(1.0f / (gridX - 1), 1.0f / (gridY - 1));
+
+    // Number of columns and rows
+    unsigned int columnCount = gridX;
+    unsigned int rowCount = gridY;
+
+    // Iterate over each VERTEX
+    for (unsigned int j = 0; j < rowCount; ++j)
+    {
+        for (unsigned int i = 0; i < columnCount; ++i)
+        {
+            // Vertex data for this vertex only
+            glm::vec3 position(i * scale.x, 0.0f, j * scale.y);
+            glm::vec3 normal(0.0f, 1.0f, 0.0f);
+            glm::vec2 texCoord(i, j);
+            vertices.emplace_back(position, normal, texCoord);
+
+            // Index data for quad formed by previous vertices and current
+            if (i > 0 && j > 0)
+            {
+                unsigned int top_right = j * columnCount + i; // Current vertex
+                unsigned int top_left = top_right - 1;
+                unsigned int bottom_right = top_right - columnCount;
+                unsigned int bottom_left = bottom_right - 1;
+
+                //Triangle 1
+                indices.push_back(bottom_left);
+                indices.push_back(bottom_right);
+                indices.push_back(top_left);
+
+                //Triangle 2
+                indices.push_back(bottom_right);
+                indices.push_back(top_left);
+                indices.push_back(top_right);
+            }
+        }
+    }
+
+    mesh.AddSubmesh<Vertex, unsigned int, VertexFormat::LayoutIterator>(Drawcall::Primitive::Triangles, vertices, indices,
+        vertexFormat.LayoutBegin(static_cast<int>(vertices.size()), true /* interleaved */), vertexFormat.LayoutEnd());
 }
 
 void ViewerApplication::Cleanup()
@@ -74,6 +174,8 @@ void ViewerApplication::Cleanup()
 
 void ViewerApplication::InitializeModel()
 {
+    CreateTerrainMesh(m_terrainPatch, 10, 10);
+
     // Load and build shader
     Shader vertexShader = ShaderLoader::Load(Shader::VertexShader, "shaders/blinn-phong.vert");
     Shader fragmentShader = ShaderLoader::Load(Shader::FragmentShader, "shaders/blinn-phong.frag");
@@ -94,6 +196,24 @@ void ViewerApplication::InitializeModel()
     material->SetUniformValue("DiffuseReflection", 1.0f);
     material->SetUniformValue("SpecularReflection", 1.0f);
     material->SetUniformValue("SpecularExponent", 100.0f);
+
+    // Water
+    // Water shader
+    Shader waterVS = ShaderLoader::Load(Shader::VertexShader, "shaders/water.vert");
+    Shader waterFS = ShaderLoader::Load(Shader::FragmentShader, "shaders/water.frag");
+    std::shared_ptr<ShaderProgram> waterShaderProgram = std::make_shared<ShaderProgram>();
+    waterShaderProgram->Build(waterVS, waterFS);
+
+    // Water material
+    m_waterMaterial = std::make_shared<Material>(waterShaderProgram);
+    m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+    m_waterMaterial->SetUniformValue("Speed", 1.0f);
+    m_waterMaterial->SetUniformValue("Amplitude", 0.5f);
+    m_waterMaterial->SetUniformValue("Wavelength", 10.0f);
+    m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
+    m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(0.0625f));
+    m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
+    m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
 
     // Setup function
     ShaderProgram::Location worldMatrixLocation = shaderProgram->GetUniformLocation("WorldMatrix");
@@ -123,6 +243,7 @@ void ViewerApplication::InitializeModel()
 
     // Load model
     m_model = loader.Load("models/mill/Mill.obj");
+    //m_model = loader.Load("models/boat/Lowpoly_Tugboat.obj");
 
     // Load and set textures
     Texture2DLoader textureLoader(TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA8);
@@ -130,6 +251,8 @@ void ViewerApplication::InitializeModel()
     m_model.GetMaterial(0).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_shadow.jpg"));
     m_model.GetMaterial(1).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_color.jpg"));
     m_model.GetMaterial(2).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/MillCat_color.jpg"));
+
+    m_waterMaterial->SetUniformValue("ColorTexture", textureLoader.LoadShared("textures/water.png"));
 }
 
 void ViewerApplication::InitializeCamera()

@@ -3,8 +3,12 @@
 #include <ituGL/application/Application.h>
 
 #include <ituGL/camera/Camera.h>
+#include <ituGL/shader/Material.h>
+#include <ituGL/geometry/Mesh.h>
 #include <ituGL/geometry/Model.h>
 #include <ituGL/utils/DearImGui.h>
+#include <vector>
+#include <glm/mat4x4.hpp>
 
 class Texture2DObject;
 
@@ -20,9 +24,14 @@ protected:
     void Cleanup() override;
 
 private:
+
+    void DrawWater();
+    void DrawObject(const Mesh& mesh, Material& material, const glm::mat4& worldMatrix);
+
     void InitializeModel();
     void InitializeCamera();
     void InitializeLights();
+    void CreateTerrainMesh(Mesh& mesh, unsigned int gridX, unsigned int gridY);
 
     void UpdateCamera();
 
@@ -42,6 +51,11 @@ private:
     float m_cameraRotationSpeed;
     bool m_cameraEnabled;
     bool m_cameraEnablePressed;
+
+
+    // terrain
+    Mesh m_terrainPatch;
+    std::shared_ptr<Material> m_waterMaterial;
 
     // Loaded model
     Model m_model;

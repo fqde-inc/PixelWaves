@@ -44,6 +44,7 @@ private:
 
     Mesh m_terrainPatch;
 
+
     std::shared_ptr<Material> m_defaultMaterial;
     std::shared_ptr<Material> m_terrainMaterial00;
     std::shared_ptr<Material> m_terrainMaterial10;

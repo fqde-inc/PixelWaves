@@ -48,5 +48,5 @@ void main()
 	vec3 lightVector = normalize(LightPosition - WorldPosition);
 	vec3 viewVector = normalize(CameraPosition - WorldPosition);
 	vec3 normalVector = normalize(WorldNormal);
-	FragColor = vec4(GetBlinnPhongReflection(objectColor.rgb, lightVector, viewVector, normalVector), 1.0f);
+	FragColor = vec4( GetBlinnPhongReflection(objectColor.rgb, lightVector, viewVector, normalVector), 1.0f );
 }
