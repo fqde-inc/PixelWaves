@@ -112,11 +112,11 @@ void PixelWavesApplication::DrawObject(const Mesh& mesh, Material& material, con
 
     ShaderProgram& shaderProgram = *material.GetShaderProgram();
 
-    ShaderProgram::Location locationWorldMatrix = shaderProgram.GetUniformLocation("WorldMatrix");
-    ShaderProgram::Location locationViewProjMatrix = shaderProgram.GetUniformLocation("ViewProjMatrix");
+    //ShaderProgram::Location locationWorldMatrix = shaderProgram.GetUniformLocation("WorldViewMatrix");
+    //ShaderProgram::Location locationViewProjMatrix = shaderProgram.GetUniformLocation("WorldViewProjMatrix");
 
-    material.GetShaderProgram()->SetUniform(locationWorldMatrix, worldMatrix);
-    material.GetShaderProgram()->SetUniform(locationViewProjMatrix, m_cameraController.GetCamera()->GetCamera()->GetViewProjectionMatrix());
+    //material.GetShaderProgram()->SetUniform(locationWorldMatrix, worldMatrix);
+    //material.GetShaderProgram()->SetUniform(locationViewProjMatrix, m_cameraController.GetCamera()->GetCamera()->GetViewProjectionMatrix());
 
     mesh.DrawSubmesh(0);
 }
@@ -209,13 +209,12 @@ void PixelWavesApplication::InitializeMaterials()
         // Load and build shader
         std::vector<const char*> vertexShaderPaths;
         vertexShaderPaths.push_back("shaders/version330.glsl");
-        vertexShaderPaths.push_back("shaders/default.vert");
+        vertexShaderPaths.push_back("shaders/water.vert");
         Shader vertexShader = ShaderLoader(Shader::VertexShader).Load(vertexShaderPaths);
 
         std::vector<const char*> fragmentShaderPaths;
         fragmentShaderPaths.push_back("shaders/version330.glsl");
-        fragmentShaderPaths.push_back("shaders/utils.glsl");
-        fragmentShaderPaths.push_back("shaders/default.frag");
+        fragmentShaderPaths.push_back("shaders/water.frag");
         Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
 
         std::shared_ptr<ShaderProgram> shaderProgramPtr = std::make_shared<ShaderProgram>();
@@ -242,7 +241,15 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Create material
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
-        m_waterMaterial->SetUniformValue("Color", glm::vec3(1.0f));
+        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+        m_waterMaterial->SetUniformValue("Speed", 1.5f);
+        m_waterMaterial->SetUniformValue("Amplitude", 0.15f);
+        m_waterMaterial->SetUniformValue("Wavelength", 15.0f);
+        m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
+        m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
+        m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
+        m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
+
     }
 
     // Deferred material
@@ -469,6 +476,9 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
+
+
+        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_waterMaterial, m_sceneFramebuffer));
     }
 
     // Initialize the framebuffers and the textures they use

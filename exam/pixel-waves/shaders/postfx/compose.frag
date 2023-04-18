@@ -44,11 +44,18 @@ vec3 ApplyColorFilter(vec3 color)
 
 void main()
 {
+	
+	// pixelate
+	float pixelationLevel = 480.0f;
+	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
+
 	// Read from the HDR framebuffer
-	vec3 hdrColor = texture(SourceTexture, TexCoord).rgb;
+	//vec3 hdrColor = texture(SourceTexture, TexCoord).rgb;
+	vec3 hdrColor = texture(SourceTexture, roundedTexCoord).rgb;
 
 	// Add bloom
-	hdrColor += texture(BloomTexture, TexCoord).rgb;
+	//hdrColor += texture(BloomTexture, TexCoord).rgb;
+	hdrColor += texture(BloomTexture, roundedTexCoord).rgb;
 
 	// Apply exposure
 	vec3 color = vec3(1.0f) - exp(-hdrColor * Exposure);
