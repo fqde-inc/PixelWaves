@@ -108,31 +108,6 @@ void ViewerApplication::DrawWater() {
 
 }
 
-void ViewerApplication::Cleanup()
-{
-    // Cleanup DearImGUI
-    m_imGui.Cleanup();
-
-    Application::Cleanup();
-}
-
-void ViewerApplication::InitializeCamera()
-{
-    // Create the main camera
-    std::shared_ptr<Camera> camera = std::make_shared<Camera>();
-    camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 0.5f, 0), glm::vec3(0, 1, 0));
-    camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
-
-    // Create a scene node for the camera
-    std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", camera);
-
-    // Add the camera node to the scene
-    m_scene.AddSceneNode(sceneCamera);
-
-    // Set the camera scene node to be controlled by the camera controller
-    m_cameraController.SetCamera(sceneCamera);
-}
-
 void ViewerApplication::DrawObject(const Mesh& mesh, Material& material, const glm::mat4& worldMatrix)
 {
     material.Use();
@@ -314,7 +289,7 @@ void ViewerApplication::InitializeMaterials()
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
             },
             m_renderer.GetDefaultUpdateLightsFunction(*shaderProgramPtr)
-                );
+        );
 
         // Create material
         m_deferredMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
@@ -335,12 +310,11 @@ void ViewerApplication::InitializeMaterials()
         fragmentShaderPaths.push_back("shaders/renderer/deferred.frag");
         Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
 
-        std::shared_ptr<ShaderProgram> shaderProgramPtr = std::make_shared<ShaderProgram>();
-        shaderProgramPtr->Build(vertexShader, fragmentShader);
-        Shader vertexShader = ShaderLoader::Load(Shader::VertexShader, "shaders/blinn-phong.vert");
-        Shader fragmentShader = ShaderLoader::Load(Shader::FragmentShader, "shaders/blinn-phong.frag");
         std::shared_ptr<ShaderProgram> shaderProgram = std::make_shared<ShaderProgram>();
         shaderProgram->Build(vertexShader, fragmentShader);
+        
+        //Shader vertexShader = ShaderLoader::Load(Shader::VertexShader, "shaders/blinn-phong.vert");
+        //Shader fragmentShader = ShaderLoader::Load(Shader::FragmentShader, "shaders/blinn-phong.frag");
 
         // Filter out uniforms that are not material properties
         ShaderUniformCollection::NameSet filteredUniforms;
@@ -350,12 +324,12 @@ void ViewerApplication::InitializeMaterials()
         filteredUniforms.insert("LightColor");
 
         // Create reference material
-        std::shared_ptr<Material> material = std::make_shared<Material>(shaderProgram, filteredUniforms);
-        material->SetUniformValue("Color", glm::vec4(1.0f));
-        material->SetUniformValue("AmbientReflection", 1.0f);
-        material->SetUniformValue("DiffuseReflection", 1.0f);
-        material->SetUniformValue("SpecularReflection", 1.0f);
-        material->SetUniformValue("SpecularExponent", 100.0f);
+        m_houseMaterial = std::make_shared<Material>(shaderProgram, filteredUniforms);
+        m_houseMaterial->SetUniformValue("Color", glm::vec4(1.0f));
+        m_houseMaterial->SetUniformValue("AmbientReflection", 1.0f);
+        m_houseMaterial->SetUniformValue("DiffuseReflection", 1.0f);
+        m_houseMaterial->SetUniformValue("SpecularReflection", 1.0f);
+        m_houseMaterial->SetUniformValue("SpecularExponent", 100.0f);
     }
 
     // Water
@@ -373,11 +347,11 @@ void ViewerApplication::InitializeMaterials()
         // Water shader
         Shader waterVS = ShaderLoader::Load(Shader::VertexShader, "shaders/water.vert");
         Shader waterFS = ShaderLoader::Load(Shader::FragmentShader, "shaders/water.frag");
-        std::shared_ptr<ShaderProgram> waterShaderProgram = std::make_shared<ShaderProgram>();
-        waterShaderProgram->Build(waterVS, waterFS);
+        std::shared_ptr<ShaderProgram> shaderProgram = std::make_shared<ShaderProgram>();
+        shaderProgram->Build(waterVS, waterFS);
 
         // Water material
-        m_waterMaterial = std::make_shared<Material>(waterShaderProgram);
+        m_waterMaterial = std::make_shared<Material>(shaderProgram);
         m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
         m_waterMaterial->SetUniformValue("Amplitude", 0.15f);
@@ -394,37 +368,23 @@ void ViewerApplication::InitializeMaterials()
         ShaderProgram::Location lightColorLocation = shaderProgram->GetUniformLocation("LightColor");
         ShaderProgram::Location lightPositionLocation = shaderProgram->GetUniformLocation("LightPosition");
         ShaderProgram::Location cameraPositionLocation = shaderProgram->GetUniformLocation("CameraPosition");
-        material->SetShaderSetupFunction([=](ShaderProgram& shaderProgram)
+
+        // Register shader with renderer
+        m_renderer.RegisterShaderProgram(shaderProgram,
+            [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
                 shaderProgram.SetUniform(worldMatrixLocation, glm::scale(glm::vec3(0.1f)));
-                shaderProgram.SetUniform(viewProjMatrixLocation, m_camera.GetViewProjectionMatrix());
+                shaderProgram.SetUniform(viewProjMatrixLocation, camera.GetViewProjectionMatrix());
 
                 // Set camera and light uniforms
                 shaderProgram.SetUniform(ambientColorLocation, m_ambientColor);
                 shaderProgram.SetUniform(lightColorLocation, m_lightColor * m_lightIntensity);
                 shaderProgram.SetUniform(lightPositionLocation, m_lightPosition);
-                shaderProgram.SetUniform(cameraPositionLocation, m_cameraPosition);
-            });
+                shaderProgram.SetUniform(cameraPositionLocation, camera.GetViewMatrix());
+            },
+            m_renderer.GetDefaultUpdateLightsFunction(*shaderProgram)
+                );
 
-        // Configure loader
-        ModelLoader loader(material);
-        loader.SetCreateMaterials(true);
-        loader.SetMaterialAttribute(VertexAttribute::Semantic::Position, "VertexPosition");
-        loader.SetMaterialAttribute(VertexAttribute::Semantic::Normal, "VertexNormal");
-        loader.SetMaterialAttribute(VertexAttribute::Semantic::TexCoord0, "VertexTexCoord");
-
-        // Load model
-        m_model = loader.Load("models/mill/Mill.obj");
-        //m_model = loader.Load("models/boat/Lowpoly_Tugboat.obj");
-
-        // Load and set textures
-        Texture2DLoader textureLoader(TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA8);
-        textureLoader.SetFlipVertical(true);
-        m_model.GetMaterial(0).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_shadow.jpg"));
-        m_model.GetMaterial(1).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_color.jpg"));
-        m_model.GetMaterial(2).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/MillCat_color.jpg"));
-
-        m_waterMaterial->SetUniformValue("ColorTexture", textureLoader.LoadShared("textures/water.png"));
     }
 }
 
@@ -470,6 +430,20 @@ void ViewerApplication::InitializeModel()
     // Load models
     std::shared_ptr<Model> cannonModel = loader.LoadShared("models/cannon/cannon.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("house", cannonModel));
+
+    // Load model
+    std::shared_ptr<Model> houseModel = loader.LoadShared("models/mill/Mill.obj");
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("house", houseModel));
+    //m_model = loader.Load("models/boat/Lowpoly_Tugboat.obj");
+
+    // Load and set textures
+    Texture2DLoader textureLoader(TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA8);
+    textureLoader.SetFlipVertical(true);
+    m_model.GetMaterial(0).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_shadow.jpg"));
+    m_model.GetMaterial(1).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/Ground_color.jpg"));
+    m_model.GetMaterial(2).SetUniformValue("ColorTexture", textureLoader.LoadShared("models/mill/MillCat_color.jpg"));
+
+    m_waterMaterial->SetUniformValue("ColorTexture", textureLoader.LoadShared("textures/water.png"));
 
 }
 

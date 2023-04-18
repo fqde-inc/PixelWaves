@@ -72,12 +72,8 @@ private:
     std::shared_ptr<Material> m_waterMaterial;
     float waterHeight = 2.5f;
 
-    // Deffered
-    std::shared_ptr<Material> m_deferredMaterial;
-
     // Loaded model
     Model m_model;
-    std::shared_ptr<TextureCubemapObject> m_skyboxTexture;
 
     // Add light variables
     glm::vec3 m_ambientColor;
@@ -88,11 +84,9 @@ private:
     // Specular exponent debug
     float m_specularExponentGrass;
 
-    // Skybox texture
-    std::shared_ptr<TextureCubemapObject> m_skyboxTexture;
-
     // Materials
     std::shared_ptr<Material> m_defaultMaterial;
+    std::shared_ptr<Material> m_houseMaterial;
     std::shared_ptr<Material> m_deferredMaterial;
     std::shared_ptr<Material> m_composeMaterial;
 
