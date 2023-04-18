@@ -11,5 +11,5 @@ uniform vec2 ColorTextureScale;
 
 void main()
 {
-	FragColor = Color * texture(ColorTexture, TexCoord * ColorTextureScale);
+	FragColor = Color * texture(ColorTexture, TexCoord);
 }

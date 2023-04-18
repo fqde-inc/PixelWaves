@@ -6,6 +6,7 @@
 
 #include <ituGL/camera/Camera.h>
 #include <ituGL/scene/SceneCamera.h>
+#include <ituGL/scene/Transform.h>
 
 #include <ituGL/lighting/DirectionalLight.h>
 #include <ituGL/lighting/PointLight.h>
@@ -16,6 +17,7 @@
 #include <ituGL/shader/Material.h>
 #include <ituGL/geometry/Model.h>
 #include <ituGL/scene/SceneModel.h>
+#include <ituGL/geometry/Mesh.h>
 
 #include <ituGL/renderer/SkyboxRenderPass.h>
 #include <ituGL/renderer/GBufferRenderPass.h>
@@ -24,6 +26,7 @@
 #include <ituGL/scene/RendererSceneVisitor.h>
 
 #include <ituGL/geometry/VertexFormat.h>
+#include <ituGL/texture/Texture2DObject.h>
 
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/transform.hpp>
@@ -55,10 +58,14 @@ void PixelWavesApplication::Initialize()
 
     InitializeCamera();
     InitializeLights();
+    InitializeTextures();
     InitializeMaterials();
-    InitializeModels();
     InitializeWaterMesh();
+    InitializeModels();
     InitializeRenderer();
+
+    GetDevice().EnableFeature(GL_DEPTH_TEST);
+    //GetDevice().SetWireframeEnabled(true);
 }
 
 void PixelWavesApplication::Update()
@@ -75,8 +82,11 @@ void PixelWavesApplication::Update()
     // Water
     const float pi = 3.1416f;
 
-    waterHeight = 4.15f + 0.15f * sin(5 * pi * GetCurrentTime() / 10.0f);
-    m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
+    waterHeight = .05f +  0.01 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
+    auto trans = waterTransform->GetTranslation();
+    trans.y = waterHeight;
+    waterTransform->SetTranslation(trans);
 }
 
 void PixelWavesApplication::Render()
@@ -88,37 +98,8 @@ void PixelWavesApplication::Render()
     // Render the scene
     m_renderer.Render();
 
-    DrawWater();
-
     // Render the debug user interface
     RenderGUI();
-}
-
-
-void PixelWavesApplication::DrawWater() {
-
-    float scale = 20.0f;
-
-    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
-    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
-    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
-    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
-
-}
-
-void PixelWavesApplication::DrawObject(const Mesh& mesh, Material& material, const glm::mat4& worldMatrix)
-{
-    material.Use();
-
-    ShaderProgram& shaderProgram = *material.GetShaderProgram();
-
-    //ShaderProgram::Location locationWorldMatrix = shaderProgram.GetUniformLocation("WorldViewMatrix");
-    //ShaderProgram::Location locationViewProjMatrix = shaderProgram.GetUniformLocation("WorldViewProjMatrix");
-
-    //material.GetShaderProgram()->SetUniform(locationWorldMatrix, worldMatrix);
-    //material.GetShaderProgram()->SetUniform(locationViewProjMatrix, m_cameraController.GetCamera()->GetCamera()->GetViewProjectionMatrix());
-
-    mesh.DrawSubmesh(0);
 }
 
 void PixelWavesApplication::Cleanup()
@@ -159,6 +140,17 @@ void PixelWavesApplication::InitializeLights()
     //pointLight->SetPosition(glm::vec3(0, 0, 0));
     //pointLight->SetDistanceAttenuation(glm::vec2(5.0f, 10.0f));
     //m_scene.AddSceneNode(std::make_shared<SceneLight>("point light", pointLight));
+}
+
+void PixelWavesApplication::InitializeTextures()
+{
+    m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
+    m_waterTexture->Bind();
+    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
+    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+    m_waterTexture->GenerateMipmap();
+    Texture2DObject::Unbind();
+
 }
 
 void PixelWavesApplication::InitializeMaterials()
@@ -221,6 +213,8 @@ void PixelWavesApplication::InitializeMaterials()
         shaderProgramPtr->Build(vertexShader, fragmentShader);
 
         // Get transform related uniform locations
+        ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
+        ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
         ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
 
@@ -228,26 +222,31 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
+                shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
+                shaderProgram.SetUniform(timeLocation, GetCurrentTime());
             },
-            nullptr
+            m_renderer.GetDefaultUpdateLightsFunction(*shaderProgramPtr)
         );
 
         // Filter out uniforms that are not material properties
         ShaderUniformCollection::NameSet filteredUniforms;
+        filteredUniforms.insert("WorldMatrix");
         filteredUniforms.insert("WorldViewMatrix");
         filteredUniforms.insert("WorldViewProjMatrix");
 
         // Create material
+
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
-        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.2f));
+        m_waterMaterial->SetUniformValue("ColorTexture", m_waterTexture);
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
-        m_waterMaterial->SetUniformValue("Amplitude", 0.15f);
-        m_waterMaterial->SetUniformValue("Wavelength", 15.0f);
+        m_waterMaterial->SetUniformValue("Amplitude", 0.01f);
+        m_waterMaterial->SetUniformValue("Wavelength", 10.0f);
         m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
         m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
-        m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
+        //m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
         m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
     }
 
@@ -343,15 +342,22 @@ void PixelWavesApplication::InitializeModels()
     std::shared_ptr<Model> cannonModel = loader.LoadShared("models/cannon/cannon.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
 
-    std::shared_ptr<Model> waterModel = std::make_shared<Model>();
-    waterModel->SetMesh(m_waterPatch);
-    m_scene.AddSceneNode(std::make_shared<SceneModel>("water", waterModel));
+    // Water
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
+
+    auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
+    waterTransform->SetScale(glm::vec3(4.0f));
+    waterTransform->SetTranslation(glm::vec3(-2.0f, 0, -2.0f));
 }
 
 
 void PixelWavesApplication::InitializeWaterMesh()
 {
-    std::shared_ptr<Mesh>  m_waterPatch = std::shared_ptr<Mesh>();
+
+    m_waterModel = std::make_shared<Model>();
+    m_waterModel->SetMesh( std::make_shared<Mesh>() );
+
+    Mesh& mesh = m_waterModel->GetMesh();
 
     // Define the vertex structure
     struct Vertex
@@ -377,11 +383,11 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    glm::vec2 scale(1.0f / (15 - 1), 1.0f / (15 - 1));
+    glm::vec2 scale(1.0f / (16 - 1), 1.0f / (16 - 1));
 
     // Number of columns and rows
-    unsigned int columnCount = 15;
-    unsigned int rowCount = 15;
+    unsigned int columnCount = 16;
+    unsigned int rowCount = 16;
 
     // Iterate over each VERTEX
     for (unsigned int j = 0; j < rowCount; ++j)
@@ -403,8 +409,8 @@ void PixelWavesApplication::InitializeWaterMesh()
                 unsigned int bottom_left = bottom_right - 1;
 
                 //Triangle 1
-                indices.push_back(bottom_left);
                 indices.push_back(bottom_right);
+                indices.push_back(bottom_left);
                 indices.push_back(top_left);
 
                 //Triangle 2
@@ -414,9 +420,17 @@ void PixelWavesApplication::InitializeWaterMesh()
             }
         }
     }
+    
+    mesh.AddSubmesh<Vertex, unsigned int, VertexFormat::LayoutIterator> (
+        Drawcall::Primitive::Triangles, 
+        vertices, 
+        indices,
+        vertexFormat.LayoutBegin( static_cast<int>(vertices.size() ), 
+        true /* interleaved */
+    ), vertexFormat.LayoutEnd());
 
-    m_waterPatch->AddSubmesh<Vertex, unsigned int, VertexFormat::LayoutIterator>(Drawcall::Primitive::Triangles, vertices, indices,
-        vertexFormat.LayoutBegin(static_cast<int>(vertices.size()), true /* interleaved */), vertexFormat.LayoutEnd());
+    m_waterModel->AddMaterial(m_waterMaterial);
+
 }
 
 void PixelWavesApplication::InitializeFramebuffers()
@@ -480,8 +494,6 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
-
-        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_waterMaterial, m_sceneFramebuffer));
     }
 
     // Initialize the framebuffers and the textures they use
@@ -527,6 +539,7 @@ void PixelWavesApplication::InitializeRenderer()
     m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
 
     m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
+
 }
 
 std::shared_ptr<Material> PixelWavesApplication::CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture)

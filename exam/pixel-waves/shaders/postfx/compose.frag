@@ -46,7 +46,7 @@ void main()
 {
 	
 	// pixelate
-	float pixelationLevel = 480.0f;
+	float pixelationLevel = 256.0f;
 	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
 
 	// Read from the HDR framebuffer

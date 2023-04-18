@@ -7,6 +7,7 @@
 #include <ituGL/renderer/Renderer.h>
 #include <ituGL/camera/CameraController.h>
 #include <ituGL/utils/DearImGui.h>
+#include <ituGL/geometry/Mesh.h>
 #include <array>
 
 class Texture2DObject;
@@ -27,14 +28,12 @@ protected:
 private:
     void InitializeCamera();
     void InitializeLights();
+    void InitializeTextures();
     void InitializeMaterials();
     void InitializeModels();
     void InitializeFramebuffers();
     void InitializeRenderer();
     void InitializeWaterMesh();
-
-    void DrawWater();
-    void DrawObject(const Mesh& mesh, Material& material, const glm::mat4& worldMatrix);
 
     std::shared_ptr<Material> CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture = nullptr);
 
@@ -59,7 +58,8 @@ private:
     std::shared_ptr<TextureCubemapObject> m_skyboxTexture;
 
     // Water
-    std::shared_ptr<Mesh> m_waterPatch;
+    std::shared_ptr<Model> m_waterModel;
+    std::shared_ptr<Texture2DObject> m_waterTexture;
     float waterHeight = 2.5f;
 
     // Materials
