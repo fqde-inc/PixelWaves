@@ -99,10 +99,10 @@ void PixelWavesApplication::DrawWater() {
 
     float scale = 20.0f;
 
-    DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
-    DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
-    DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
-    DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
+    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
+    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, 0.0f)) * glm::scale(glm::vec3(scale)));
+    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(-scale, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
+    //DrawObject(m_waterPatch, *m_waterMaterial, glm::translate(glm::vec3(0.0f, waterHeight, -scale)) * glm::scale(glm::vec3(scale)));
 
 }
 
@@ -249,7 +249,6 @@ void PixelWavesApplication::InitializeMaterials()
         m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
         m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
         m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
-
     }
 
     // Deferred material
@@ -343,11 +342,16 @@ void PixelWavesApplication::InitializeModels()
     // Load models
     std::shared_ptr<Model> cannonModel = loader.LoadShared("models/cannon/cannon.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
+
+    std::shared_ptr<Model> waterModel = std::make_shared<Model>();
+    waterModel->SetMesh(m_waterPatch);
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("water", waterModel));
 }
 
 
 void PixelWavesApplication::InitializeWaterMesh()
 {
+    std::shared_ptr<Mesh>  m_waterPatch = std::shared_ptr<Mesh>();
 
     // Define the vertex structure
     struct Vertex
@@ -411,7 +415,7 @@ void PixelWavesApplication::InitializeWaterMesh()
         }
     }
 
-    m_waterPatch.AddSubmesh<Vertex, unsigned int, VertexFormat::LayoutIterator>(Drawcall::Primitive::Triangles, vertices, indices,
+    m_waterPatch->AddSubmesh<Vertex, unsigned int, VertexFormat::LayoutIterator>(Drawcall::Primitive::Triangles, vertices, indices,
         vertexFormat.LayoutBegin(static_cast<int>(vertices.size()), true /* interleaved */), vertexFormat.LayoutEnd());
 }
 
@@ -476,7 +480,6 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
-
 
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_waterMaterial, m_sceneFramebuffer));
     }

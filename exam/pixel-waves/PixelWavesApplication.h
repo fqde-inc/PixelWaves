@@ -59,7 +59,7 @@ private:
     std::shared_ptr<TextureCubemapObject> m_skyboxTexture;
 
     // Water
-    Mesh m_waterPatch;
+    std::shared_ptr<Mesh> m_waterPatch;
     float waterHeight = 2.5f;
 
     // Materials
