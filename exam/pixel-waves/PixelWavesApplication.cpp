@@ -453,6 +453,21 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_sceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
     FramebufferObject::Unbind();
 
+    // Water texture
+    m_waterTexture = std::make_shared<Texture2DObject>();
+    m_waterTexture->Bind();
+    m_waterTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
+    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
+    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+    Texture2DObject::Unbind();
+
+    // Water framebuffer
+    m_waterFramebuffer = std::make_shared<FramebufferObject>();
+    m_waterFramebuffer->Bind();
+    m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_waterTexture);
+    m_waterFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
+    FramebufferObject::Unbind();
+
     // Add temp textures and frame buffers
     for (int i = 0; i < m_tempFramebuffers.size(); ++i)
     {

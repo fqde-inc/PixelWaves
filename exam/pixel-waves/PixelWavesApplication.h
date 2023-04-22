@@ -71,6 +71,7 @@ private:
 
     // Framebuffers
     std::shared_ptr<FramebufferObject> m_sceneFramebuffer;
+    std::shared_ptr<FramebufferObject> m_waterFramebuffer;
     std::shared_ptr<Texture2DObject> m_depthTexture;
     std::shared_ptr<Texture2DObject> m_sceneTexture;
     std::array<std::shared_ptr<FramebufferObject>, 2> m_tempFramebuffers;

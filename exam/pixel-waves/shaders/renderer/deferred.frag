@@ -38,6 +38,5 @@ void main()
 
 	// Compute lighting
 	vec3 lighting = ComputeLighting(position, data, viewDir, true);
-	//FragColor = vec4(lighting, 1.0f);
-	FragColor = others;
+	FragColor = vec4(lighting, 1.0f);
 }
