@@ -59,6 +59,7 @@ private:
 
     // Water
     std::shared_ptr<Model> m_waterModel;
+    std::shared_ptr<Mesh> m_waterMesh;
     std::shared_ptr<Texture2DObject> m_waterTexture;
     float waterHeight = 2.5f;
 

@@ -20,6 +20,7 @@
 #include <ituGL/geometry/Mesh.h>
 
 #include <ituGL/renderer/SkyboxRenderPass.h>
+#include <ituGL/renderer/WaterRenderPass.h>
 #include <ituGL/renderer/GBufferRenderPass.h>
 #include <ituGL/renderer/DeferredRenderPass.h>
 #include <ituGL/renderer/PostFXRenderPass.h>
@@ -82,11 +83,11 @@ void PixelWavesApplication::Update()
     // Water
     const float pi = 3.1416f;
 
-    waterHeight = .05f +  0.01 * sin(2 * pi * GetCurrentTime() / 15.0f);
-    auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
-    auto trans = waterTransform->GetTranslation();
-    trans.y = waterHeight;
-    waterTransform->SetTranslation(trans);
+    //waterHeight = .05f +  0.01 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    //auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
+    //auto trans = waterTransform->GetTranslation();
+    //trans.y = waterHeight;
+    //waterTransform->SetTranslation(trans);
 }
 
 void PixelWavesApplication::Render()
@@ -343,20 +344,20 @@ void PixelWavesApplication::InitializeModels()
     m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
 
     // Water
-    m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
+    //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
 
-    auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
-    waterTransform->SetScale(glm::vec3(4.0f));
-    waterTransform->SetTranslation(glm::vec3(-2.0f, 0, -2.0f));
+    //auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
+    //waterTransform->SetScale(glm::vec3(4.0f));
+    //waterTransform->SetTranslation(glm::vec3(-2.0f, 0, -2.0f));
 }
 
 
 void PixelWavesApplication::InitializeWaterMesh()
 {
-
+    m_waterMesh = std::make_shared<Mesh>();
     m_waterModel = std::make_shared<Model>();
-    m_waterModel->SetMesh( std::make_shared<Mesh>() );
 
+    m_waterModel->SetMesh(m_waterMesh);
     Mesh& mesh = m_waterModel->GetMesh();
 
     // Define the vertex structure
@@ -429,7 +430,7 @@ void PixelWavesApplication::InitializeWaterMesh()
         true /* interleaved */
     ), vertexFormat.LayoutEnd());
 
-    m_waterModel->AddMaterial(m_waterMaterial);
+    //m_waterModel->AddMaterial(m_waterMaterial);
 
 }
 
@@ -509,6 +510,8 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
+    
+        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f)));
     }
 
     // Initialize the framebuffers and the textures they use
