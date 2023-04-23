@@ -207,6 +207,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         std::vector<const char*> fragmentShaderPaths;
         fragmentShaderPaths.push_back("shaders/version330.glsl");
+        fragmentShaderPaths.push_back("shaders/utils.glsl");
         fragmentShaderPaths.push_back("shaders/water.frag");
         Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
 
@@ -240,14 +241,14 @@ void PixelWavesApplication::InitializeMaterials()
         // Create material
 
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
-        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 0.2f));
+        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         m_waterMaterial->SetUniformValue("ColorTexture", m_waterTexture);
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
         m_waterMaterial->SetUniformValue("Amplitude", 0.01f);
         m_waterMaterial->SetUniformValue("Wavelength", 10.0f);
         m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
         m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
-        //m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
+        m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
         m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
     }
 
@@ -355,10 +356,11 @@ void PixelWavesApplication::InitializeModels()
 void PixelWavesApplication::InitializeWaterMesh()
 {
     m_waterMesh = std::make_shared<Mesh>();
-    m_waterModel = std::make_shared<Model>();
+    //m_waterModel = std::make_shared<Model>();
 
-    m_waterModel->SetMesh(m_waterMesh);
-    Mesh& mesh = m_waterModel->GetMesh();
+    //m_waterModel->SetMesh(m_waterMesh);
+    //Mesh& mesh = m_waterModel->GetMesh();
+    Mesh& mesh = *m_waterMesh.get();
 
     // Define the vertex structure
     struct Vertex
@@ -384,11 +386,13 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    glm::vec2 scale(1.0f / (16 - 1), 1.0f / (16 - 1));
+    int size = 6;
+    glm::vec2 pos = glm::vec2(size/2.0f);
+    glm::vec2 scale(size / (size - 1), size / (size - 1));
 
     // Number of columns and rows
-    unsigned int columnCount = 16;
-    unsigned int rowCount = 16;
+    unsigned int columnCount = size;
+    unsigned int rowCount = size;
 
     // Iterate over each VERTEX
     for (unsigned int j = 0; j < rowCount; ++j)
@@ -396,7 +400,7 @@ void PixelWavesApplication::InitializeWaterMesh()
         for (unsigned int i = 0; i < columnCount; ++i)
         {
             // Vertex data for this vertex only
-            glm::vec3 position(i * scale.x, 0.0f, j * scale.y);
+            glm::vec3 position( (i * scale.x) - pos.x, 0.1f, (j * scale.y) - pos.y);
             glm::vec3 normal(0.0f, 1.0f, 0.0f);
             glm::vec2 texCoord(i, j);
             vertices.emplace_back(position, normal, texCoord);
@@ -511,7 +515,6 @@ void PixelWavesApplication::InitializeRenderer()
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
     
-        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f)));
     }
 
     // Initialize the framebuffers and the textures they use
@@ -520,44 +523,59 @@ void PixelWavesApplication::InitializeRenderer()
     // Skybox pass
     m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
 
-    // Create a copy pass from m_sceneTexture to the first temporary texture
     std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
-    m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
 
-    // Replace the copy pass with a new bloom pass
-    m_bloomMaterial = CreatePostFXMaterial("shaders/postfx/bloom.frag", m_sceneTexture);
-    m_bloomMaterial->SetUniformValue("Range", glm::vec2(2.0f, 3.0f));
-    m_bloomMaterial->SetUniformValue("Intensity", 1.0f);
-    m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_bloomMaterial, m_tempFramebuffers[0]));
-
-    // Add blur passes
-    std::shared_ptr<Material> blurHorizontalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[0]);
-    blurHorizontalMaterial->SetUniformValue("Scale", glm::vec2(1.0f / width, 0.0f));
-    std::shared_ptr<Material> blurVerticalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[1]);
-    blurVerticalMaterial->SetUniformValue("Scale", glm::vec2(0.0f, 1.0f / height));
-    for (int i = 0; i < m_blurIterations; ++i)
+    // Water pass
     {
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurHorizontalMaterial, m_tempFramebuffers[1]));
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurVerticalMaterial, m_tempFramebuffers[0]));
+        // Create a copy pass from m_sceneTexture to the first temporary texture
+        //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+
+        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f)));
     }
+    
+    //Post-processing
+    {
+        // Create a copy pass from m_sceneTexture to the first temporary texture
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
 
-    // Final pass
-    m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
+        // Create a copy pass from m_sceneTexture to the first temporary texture
+        std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
 
-    // Set exposure uniform default value
-    m_composeMaterial->SetUniformValue("Exposure", m_exposure);
+        // Replace the copy pass with a new bloom pass
+        m_bloomMaterial = CreatePostFXMaterial("shaders/postfx/bloom.frag", m_sceneTexture);
+        m_bloomMaterial->SetUniformValue("Range", glm::vec2(2.0f, 3.0f));
+        m_bloomMaterial->SetUniformValue("Intensity", 1.0f);
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_bloomMaterial, m_tempFramebuffers[0]));
 
-    // Set uniform default values
-    m_composeMaterial->SetUniformValue("Contrast", m_contrast);
-    m_composeMaterial->SetUniformValue("HueShift", m_hueShift);
-    m_composeMaterial->SetUniformValue("Saturation", m_saturation);
-    m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
+        // Add blur passes
+        std::shared_ptr<Material> blurHorizontalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[0]);
+        blurHorizontalMaterial->SetUniformValue("Scale", glm::vec2(1.0f / width, 0.0f));
+        std::shared_ptr<Material> blurVerticalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[1]);
+        blurVerticalMaterial->SetUniformValue("Scale", glm::vec2(0.0f, 1.0f / height));
+        for (int i = 0; i < m_blurIterations; ++i)
+        {
+            //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurHorizontalMaterial, m_tempFramebuffers[1]));
+            //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurVerticalMaterial, m_tempFramebuffers[0]));
+        }
 
-    // Set the bloom texture uniform
-    m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
+        // Final pass
+        m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
 
-    m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
+        // Set exposure uniform default value
+        m_composeMaterial->SetUniformValue("Exposure", m_exposure);
 
+        // Set uniform default values
+        m_composeMaterial->SetUniformValue("Contrast", m_contrast);
+        m_composeMaterial->SetUniformValue("HueShift", m_hueShift);
+        m_composeMaterial->SetUniformValue("Saturation", m_saturation);
+        m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
+
+        // Set the bloom texture uniform
+        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
+
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
+    }
 }
 
 std::shared_ptr<Material> PixelWavesApplication::CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture)

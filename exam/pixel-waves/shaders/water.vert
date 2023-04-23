@@ -18,7 +18,6 @@ uniform	float Wavelength;
 
 void main()
 {
-	
 	WorldPosition = (WorldMatrix * vec4(VertexPosition, 1.0)).xyz;
 
 	float k = 2 * 3.14f / Wavelength;
@@ -27,5 +26,5 @@ void main()
 	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
 	TexCoord = VertexTexCoord;
 
-	gl_Position = WorldViewProjMatrix * vec4(WorldPosition, 1.0);
+	gl_Position = WorldViewProjMatrix * vec4(WorldPosition, 1.0) ;
 }

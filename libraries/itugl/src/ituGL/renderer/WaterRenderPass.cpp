@@ -4,6 +4,7 @@
 #include <ituGL/geometry/Drawcall.h>
 #include <ituGL/shader/Material.h>
 #include <ituGL/texture/FramebufferObject.h>
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 
 WaterRenderPass::WaterRenderPass (std::shared_ptr<Material> material, std::shared_ptr<Mesh> mesh, std::shared_ptr<Texture2DObject> sceneTexture, glm::vec4 sceneColor, std::shared_ptr<const FramebufferObject> framebuffer )
