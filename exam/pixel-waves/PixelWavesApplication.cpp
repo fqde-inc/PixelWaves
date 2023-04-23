@@ -527,10 +527,25 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Water pass
     {
-        // Create a copy pass from m_sceneTexture to the first temporary texture
-        //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+        auto rot = m_cameraController.GetCamera()->GetTransform()->GetRotation();
+        auto pos = m_cameraController.GetCamera()->GetTransform()->GetTranslation();
 
-        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f)));
+        m_cameraController.GetCamera()->GetTransform()->SetRotation(
+            glm::vec3(-rot.x, rot.y, rot.z)
+        );
+        m_cameraController.GetCamera()->GetTransform()->SetTranslation(
+            glm::vec3(pos.x, -pos.y, pos.z)
+        );
+
+        // Create a copy pass from m_sceneTexture to the first temporary texture
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+        
+        //m_cameraController.GetCamera()->GetTransform()->SetRotation(rot);
+        //m_cameraController.GetCamera()->GetTransform()->SetTranslation(pos);
+        
+        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], glm::vec4(1.0f), m_sceneFramebuffer));
+
+        //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_renderer.GetCurrentFramebuffer()));
     }
     
     //Post-processing
