@@ -54,5 +54,5 @@ void main()
 	vec4 SceneReflection = texture(SceneTexture, SceneTexCoord);
 
 	// Compose
-	FragColor = vec4(SceneReflection.rgb, 0.2f);
+	FragColor = waterSample + vec4(SceneReflection.rgb, 0.2f);
 }
