@@ -46,13 +46,13 @@ void main()
 
 	// Water Tex
 	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
-	vec4 waterSample = vec4(Color.rgb,0.1f) * texture( ColorTexture, roundedTexCoord * ColorTextureScale);
+	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, roundedTexCoord * ColorTextureScale);
 
 	// Reflection
-	vec2 SceneTexCoord = vec2(roundedTexCoord.x, roundedTexCoord.y);
-	SceneTexCoord = (SceneTexCoord - 0.5) * (1/6.0f) + 0.5;
+	vec2 SceneTexCoord = vec2(WorldPosition.x, WorldPosition.z);
+	SceneTexCoord = (SceneTexCoord - 0.5) * (1/2.0f) + 0.5;
 	vec4 SceneReflection = texture(SceneTexture, SceneTexCoord);
 
 	// Compose
-	FragColor = waterSample + vec4(SceneReflection.rgb, 0.2f);
+	FragColor = waterSample + vec4(SceneReflection.rgb, 0.3f);
 }

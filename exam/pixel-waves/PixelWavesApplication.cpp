@@ -19,6 +19,7 @@
 #include <ituGL/scene/SceneModel.h>
 #include <ituGL/geometry/Mesh.h>
 
+#include <ituGL/renderer/ReflectionPass.h>
 #include <ituGL/renderer/SkyboxRenderPass.h>
 #include <ituGL/renderer/WaterRenderPass.h>
 #include <ituGL/renderer/GBufferRenderPass.h>
@@ -527,18 +528,9 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Water pass
     {
-        auto rot = m_cameraController.GetCamera()->GetTransform()->GetRotation();
-        auto pos = m_cameraController.GetCamera()->GetTransform()->GetTranslation();
-
-        m_cameraController.GetCamera()->GetTransform()->SetRotation(
-            glm::vec3(-rot.x, rot.y, rot.z)
-        );
-        m_cameraController.GetCamera()->GetTransform()->SetTranslation(
-            glm::vec3(pos.x, -pos.y, pos.z)
-        );
 
         // Create a copy pass from m_sceneTexture to the first temporary texture
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(copyMaterial, m_cameraController.GetCamera(), m_tempFramebuffers[0]));
         
         //m_cameraController.GetCamera()->GetTransform()->SetRotation(rot);
         //m_cameraController.GetCamera()->GetTransform()->SetTranslation(pos);
