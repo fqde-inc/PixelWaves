@@ -8,8 +8,8 @@
 #include <ituGL/texture/FramebufferObject.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-ReflectionPass::ReflectionPass(std::shared_ptr<Material> material, std::shared_ptr <SceneCamera> camera,  std::shared_ptr<const FramebufferObject> framebuffer)
-    : RenderPass(framebuffer), m_material(material), m_camera(camera)
+ReflectionPass::ReflectionPass(std::shared_ptr <Camera> camera,  std::shared_ptr<const FramebufferObject> framebuffer)
+    : RenderPass(framebuffer), m_camera(camera)
 {
 }
 
@@ -17,37 +17,37 @@ void ReflectionPass::Render()
 {
     Renderer& renderer = GetRenderer();
 
-    Transform& transform = *m_camera->GetTransform();
+    //Transform& transform = *m_camera->GetTransform();
 
-    glm::vec3 rotation = transform.GetRotation();
-    transform.SetRotation(glm::vec3(-rotation.x, rotation.y, rotation.z));
+    //glm::vec3 rotation = transform.GetRotation();
+    //transform.SetRotation(glm::vec3(-rotation.x, rotation.y, rotation.z));
 
-    glm::vec3 translation = transform.GetTranslation();
-    transform.SetTranslation(glm::vec3(translation.x, -translation.y, translation.z));
+    //glm::vec3 translation = transform.GetTranslation();
+    //transform.SetTranslation(glm::vec3(translation.x, -translation.y, translation.z));
 
-    renderer.SetCurrentCamera(*m_camera->GetCamera());
+    //renderer.SetCurrentCamera(*m_camera->GetCamera());
 
-    //auto viewMatrix = camera.GetViewMatrix();
-    //auto rot = camera.ExtractRotation();
-    //auto pos = camera.ExtractTranslation();
+    auto viewMatrix = m_camera->GetViewMatrix();
+    auto rot = m_camera->ExtractRotation();
+    auto pos = m_camera->ExtractTranslation();
 
     // Invert pitch by negating the x-axis rotation
-    //auto invViewMatrix = glm::rotate(viewMatrix, -rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
+    auto invViewMatrix = glm::rotate(viewMatrix, -rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
 
     // Negate y position to move the camera in the opposite direction along the y-axis
-    //invViewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, -pos.y, 0.0f));
+    invViewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, -pos.y, 0.0f));
 
-    //camera.SetViewMatrix(viewMatrix);
-    //renderer.SetCurrentCamera(camera);
+    m_camera->SetViewMatrix(invViewMatrix);
+    renderer.SetCurrentCamera(*m_camera);
 
-    assert(m_material);
-    m_material->Use();
+    //assert(m_material);
+    //m_material->Use();
 
-    const Mesh* mesh = &renderer.GetFullscreenMesh();
-    mesh->DrawSubmesh(0);
+    //const Mesh* mesh = &renderer.GetFullscreenMesh();
+    //mesh->DrawSubmesh(0);
 
-    transform.SetRotation(rotation);
-    transform.SetTranslation(translation);
+    //transform.SetRotation(rotation);
+    //transform.SetTranslation(translation);
 
     //camera.SetViewMatrix(viewMatrix);
     //renderer.SetCurrentCamera(camera);

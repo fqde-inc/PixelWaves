@@ -48,6 +48,9 @@ private:
     // Camera controller
     CameraController m_cameraController;
 
+    std::shared_ptr<Camera> m_camera;
+    std::shared_ptr<Camera> m_invCamera;
+
     // Global scene
     Scene m_scene;
 
@@ -67,6 +70,7 @@ private:
     std::shared_ptr<Material> m_waterMaterial;
     std::shared_ptr<Material> m_defaultMaterial;
     std::shared_ptr<Material> m_deferredMaterial;
+    std::shared_ptr<Material> m_invDeferredMaterial;
     std::shared_ptr<Material> m_composeMaterial;
     std::shared_ptr<Material> m_bloomMaterial;
 

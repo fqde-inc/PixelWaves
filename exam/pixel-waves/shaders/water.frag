@@ -49,9 +49,8 @@ void main()
 	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, roundedTexCoord * ColorTextureScale);
 
 	// Reflection
-	vec2 SceneTexCoord = vec2(WorldPosition.x, WorldPosition.z);
-	SceneTexCoord = (SceneTexCoord - 0.5) * (1/2.0f) + 0.5;
-	vec4 SceneReflection = texture(SceneTexture, SceneTexCoord);
+	vec2 reflectedTexCoord = vec2(TexCoord.x, 1.0 - TexCoord.y);
+	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
 
 	// Compose
 	FragColor = waterSample + vec4(SceneReflection.rgb, 0.3f);

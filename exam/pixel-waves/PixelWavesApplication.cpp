@@ -115,12 +115,13 @@ void PixelWavesApplication::Cleanup()
 void PixelWavesApplication::InitializeCamera()
 {
     // Create the main camera
-    std::shared_ptr<Camera> camera = std::make_shared<Camera>();
-    camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 0.5f, 0), glm::vec3(0, 1, 0));
-    camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
+    m_camera = std::make_shared<Camera>();
+
+    m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 0.5f, 0), glm::vec3(0, 1, 0));
+    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
 
     // Create a scene node for the camera
-    std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", camera);
+    std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
 
     // Add the camera node to the scene
     m_scene.AddSceneNode(sceneCamera);
@@ -303,6 +304,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Create material
         m_deferredMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
+        m_invDeferredMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
     }
 }
 
@@ -515,7 +517,6 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
-    
     }
 
     // Initialize the framebuffers and the textures they use
@@ -524,13 +525,36 @@ void PixelWavesApplication::InitializeRenderer()
     // Skybox pass
     m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
 
-    std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
+    // Set up deferred passes
+    {
+        // Create a copy pass from m_sceneTexture to the first temporary texture
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+
+        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
+
+        // Set the g-buffer textures as properties of the deferred material
+        m_invDeferredMaterial->SetUniformValue("DepthTexture", gbufferRenderPass->GetDepthTexture());
+        m_invDeferredMaterial->SetUniformValue("AlbedoTexture", gbufferRenderPass->GetAlbedoTexture());
+        m_invDeferredMaterial->SetUniformValue("NormalTexture", gbufferRenderPass->GetNormalTexture());
+        m_invDeferredMaterial->SetUniformValue("OthersTexture", gbufferRenderPass->GetOthersTexture());
+
+        // Get the depth texture from the gbuffer pass - This could be reworked
+        m_depthTexture = gbufferRenderPass->GetDepthTexture();
+
+        // Add the render passes
+        m_renderer.AddRenderPass(std::move(gbufferRenderPass));
+        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0]));
+
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+    }
+
+    // Skybox pass
+    //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
 
     // Water pass
     {
-
         // Create a copy pass from m_sceneTexture to the first temporary texture
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(copyMaterial, m_cameraController.GetCamera(), m_tempFramebuffers[0]));
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(copyMaterial, m_cameraController.GetCamera(), m_tempFramebuffers[0]));
         
         //m_cameraController.GetCamera()->GetTransform()->SetRotation(rot);
         //m_cameraController.GetCamera()->GetTransform()->SetTranslation(pos);
@@ -539,32 +563,14 @@ void PixelWavesApplication::InitializeRenderer()
 
         //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_renderer.GetCurrentFramebuffer()));
     }
-    
+
+
+    std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
+
     //Post-processing
     {
         // Create a copy pass from m_sceneTexture to the first temporary texture
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
-
-        // Create a copy pass from m_sceneTexture to the first temporary texture
-        std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
-
-        // Replace the copy pass with a new bloom pass
-        m_bloomMaterial = CreatePostFXMaterial("shaders/postfx/bloom.frag", m_sceneTexture);
-        m_bloomMaterial->SetUniformValue("Range", glm::vec2(2.0f, 3.0f));
-        m_bloomMaterial->SetUniformValue("Intensity", 1.0f);
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_bloomMaterial, m_tempFramebuffers[0]));
-
-        // Add blur passes
-        std::shared_ptr<Material> blurHorizontalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[0]);
-        blurHorizontalMaterial->SetUniformValue("Scale", glm::vec2(1.0f / width, 0.0f));
-        std::shared_ptr<Material> blurVerticalMaterial = CreatePostFXMaterial("shaders/postfx/blur.frag", m_tempTextures[1]);
-        blurVerticalMaterial->SetUniformValue("Scale", glm::vec2(0.0f, 1.0f / height));
-        for (int i = 0; i < m_blurIterations; ++i)
-        {
-            //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurHorizontalMaterial, m_tempFramebuffers[1]));
-            //m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(blurVerticalMaterial, m_tempFramebuffers[0]));
-        }
 
         // Final pass
         m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
