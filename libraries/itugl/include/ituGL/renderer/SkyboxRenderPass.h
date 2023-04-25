@@ -10,7 +10,7 @@ class TextureCubemapObject;
 class SkyboxRenderPass : public RenderPass
 {
 public:
-    SkyboxRenderPass(std::shared_ptr<TextureCubemapObject> texture);
+    SkyboxRenderPass(std::shared_ptr<TextureCubemapObject> texture,std::shared_ptr<const FramebufferObject> framebuffer = nullptr);
 
     std::shared_ptr<TextureCubemapObject> GetTexture() const;
     void SetTexture(std::shared_ptr<TextureCubemapObject> texture);

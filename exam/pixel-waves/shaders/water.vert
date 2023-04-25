@@ -24,7 +24,8 @@ void main()
 	WorldPosition.y += Amplitude * sin(k * ( WorldPosition.x - Time * Speed ));
 
 	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
-	TexCoord = VertexTexCoord * 1.0f/6.0f;
+	//TexCoord = VertexTexCoord * 1.0f/6.0f;
+	TexCoord = VertexTexCoord * 1.0f;
 
 	gl_Position = WorldViewProjMatrix * vec4(WorldPosition, 1.0) ;
 }

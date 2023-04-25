@@ -45,6 +45,7 @@ PixelWavesApplication::PixelWavesApplication()
     , m_hueShift(0.0f)
     , m_saturation(1.0f)
     , m_colorFilter(1.0f)
+    , m_pixelation(128.0f)
     , m_blurIterations(1)
     , m_bloomRange(1.0f, 2.0f)
     , m_bloomIntensity(1.0f)
@@ -77,9 +78,25 @@ void PixelWavesApplication::Update()
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
 
+
+    glm::mat4 viewMatrix = m_camera->GetViewMatrix();
+    glm::vec3 a,up,f;
+
+    m_camera->ExtractVectors(a, up, f);
+ 
+    // Invert pitch by negating the x-axis rotation
+    glm::vec3 translation = glm::vec3(viewMatrix[3]); 
+    translation.y = -translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
+
+    glm::mat4 refViewMatrix = glm::lookAt(translation, f, glm::vec3(0, 1.0f, 0));
+
+    m_reflectionCamera->SetViewMatrix(refViewMatrix);
+
     // Add the scene nodes to the renderer
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
+
+
 
     // Water
     const float pi = 3.1416f;
@@ -116,9 +133,14 @@ void PixelWavesApplication::InitializeCamera()
 {
     // Create the main camera
     m_camera = std::make_shared<Camera>();
+    m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 0.5f, 0), glm::vec3(0, 1, 0));
     m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
+
+    // Reflection = -x
+    m_reflectionCamera->SetViewMatrix(glm::vec3(-2, -1, -2), glm::vec3(0, -0.5f, 0), glm::vec3(0, 1, 0));
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -218,6 +240,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Get transform related uniform locations
         ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
+        ShaderProgram::Location viewProjLocation = shaderProgramPtr->GetUniformLocation("ViewProjMatrix");
         ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
         ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
@@ -227,6 +250,7 @@ void PixelWavesApplication::InitializeMaterials()
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
+                shaderProgram.SetUniform(viewProjLocation, camera.GetViewProjectionMatrix() * camera.GetViewMatrix() );
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
                 shaderProgram.SetUniform(timeLocation, GetCurrentTime());
@@ -292,11 +316,11 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
-                if (cameraChanged)
-                {
+               // if (cameraChanged)
+               // {
                     shaderProgram.SetUniform(invViewMatrixLocation, glm::inverse(camera.GetViewMatrix()));
                     shaderProgram.SetUniform(invProjMatrixLocation, glm::inverse(camera.GetProjectionMatrix()));
-                }
+               // }
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
             },
             m_renderer.GetDefaultUpdateLightsFunction(*shaderProgramPtr)
@@ -527,8 +551,9 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Set up deferred passes
     {
-        // Create a copy pass from m_sceneTexture to the first temporary texture
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+
+        // Flip camera
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
 
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
 
@@ -545,30 +570,22 @@ void PixelWavesApplication::InitializeRenderer()
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0]));
 
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+        // Flip camera
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
     }
 
     // Skybox pass
-    //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
+    //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture, m_tempFramebuffers[0]));
 
     // Water pass
     {
-        // Create a copy pass from m_sceneTexture to the first temporary texture
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(copyMaterial, m_cameraController.GetCamera(), m_tempFramebuffers[0]));
-        
-        //m_cameraController.GetCamera()->GetTransform()->SetRotation(rot);
-        //m_cameraController.GetCamera()->GetTransform()->SetTranslation(pos);
-        
         m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], glm::vec4(1.0f), m_sceneFramebuffer));
-
-        //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_renderer.GetCurrentFramebuffer()));
     }
-
-
-    std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
 
     //Post-processing
     {
+        std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
+
         // Create a copy pass from m_sceneTexture to the first temporary texture
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
 
@@ -583,6 +600,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_composeMaterial->SetUniformValue("HueShift", m_hueShift);
         m_composeMaterial->SetUniformValue("Saturation", m_saturation);
         m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
+        m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
 
         // Set the bloom texture uniform
         m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
@@ -625,11 +643,11 @@ Renderer::UpdateTransformsFunction PixelWavesApplication::GetFullscreenTransform
     // Return transform function
     return [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
         {
-            if (cameraChanged)
-            {
+            //if (cameraChanged)
+            //{
                 shaderProgram.SetUniform(invViewMatrixLocation, glm::inverse(camera.GetViewMatrix()));
                 shaderProgram.SetUniform(invProjMatrixLocation, glm::inverse(camera.GetProjectionMatrix()));
-            }
+            //}
             shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
         };
 }
@@ -671,6 +689,10 @@ void PixelWavesApplication::RenderGUI()
             if (ImGui::ColorEdit3("Color Filter", &m_colorFilter[0]))
             {
                 m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
+            }
+            if (ImGui::SliderFloat("Pixelation", &m_pixelation, 4.0f, 256.0f))
+            {
+                m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
             }
 
             ImGui::Separator();

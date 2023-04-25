@@ -13,6 +13,7 @@ uniform float Contrast;
 uniform float HueShift;
 uniform float Saturation;
 uniform vec3 ColorFilter;
+uniform float Pixelation;
 
 uniform sampler2D BloomTexture;
 
@@ -46,7 +47,7 @@ void main()
 {
 	
 	// pixelate
-	float pixelationLevel = 256.0f;
+	float pixelationLevel = Pixelation;
 	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
 
 	// Read from the HDR framebuffer

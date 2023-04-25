@@ -18,40 +18,29 @@ uniform mat4 WorldMatrix;
 uniform mat4 WorldViewMatrix;
 uniform mat4 WorldViewProjMatrix;
 
+uniform mat4 ViewProjMatrix;
 uniform mat4 InvViewMatrix;
 uniform mat4 InvProjMatrix;
 
 // Scene texture
-uniform vec4 SceneColor;
 uniform sampler2D SceneTexture;
 
 void main()
 {
 
-	float pixelationLevel = 128.0f;
-
-
-	// Compute view vector en view space
-	vec3 viewDir = GetDirection(VertexPosition, vec3(0));
-
-	// Convert position, normal and view vector to world space
-	vec3 position = (InvViewMatrix * vec4(VertexPosition, 1)).xyz;
-	vec3 normal = (InvViewMatrix * vec4(VertexNormal, 0)).xyz;
-	//viewDir = (InvViewMatrix * vec4(viewDir, 0)).xyz;
-
-	// texture coordinates
-	//vec3 FlipWorldPoso = viewDir * vec3(1,-1, 1);
-	//vec2 SceneTexCoord = vec2(1.0 - FlipWorldPoso.x, 1.0 - FlipWorldPoso.y);
-
+	// Transform the texture coordinates using the inverse view and projection matrices
+    vec4 viewSpace = ViewProjMatrix * vec4(TexCoord, 0.0, 1.0);
+    vec2 ndc = viewSpace.xy / viewSpace.w;
+    vec2 reflectedTexCoord = ndc * 0.5 + 0.5; // Convert to [0,1] range
 
 	// Water Tex
-	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
-	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, roundedTexCoord * ColorTextureScale);
+	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, TexCoord * ColorTextureScale);
 
 	// Reflection
-	vec2 reflectedTexCoord = vec2(TexCoord.x, 1.0 - TexCoord.y);
+	//reflectedTexCoord = vec2(TexCoord.x, 1.0 - TexCoord.y);
+
 	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
 
 	// Compose
-	FragColor = waterSample + vec4(SceneReflection.rgb, 0.3f);
+	FragColor = waterSample + vec4(SceneReflection.rgb, 0.2f);
 }

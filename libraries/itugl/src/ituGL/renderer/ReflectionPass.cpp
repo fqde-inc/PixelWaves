@@ -27,17 +27,17 @@ void ReflectionPass::Render()
 
     //renderer.SetCurrentCamera(*m_camera->GetCamera());
 
-    auto viewMatrix = m_camera->GetViewMatrix();
-    auto rot = m_camera->ExtractRotation();
-    auto pos = m_camera->ExtractTranslation();
+    //auto viewMatrix = m_camera->GetViewMatrix();
+    //auto rot = m_camera->ExtractRotation();
+    //auto pos = m_camera->ExtractTranslation();
 
     // Invert pitch by negating the x-axis rotation
-    auto invViewMatrix = glm::rotate(viewMatrix, -rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
+    //auto invViewMatrix = glm::rotate(viewMatrix, -rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
 
     // Negate y position to move the camera in the opposite direction along the y-axis
-    invViewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, -pos.y, 0.0f));
+    //invViewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, -pos.y, 0.0f));
 
-    m_camera->SetViewMatrix(invViewMatrix);
+    //m_camera->SetViewMatrix(invViewMatrix);
     renderer.SetCurrentCamera(*m_camera);
 
     //assert(m_material);

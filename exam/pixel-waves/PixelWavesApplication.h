@@ -49,7 +49,7 @@ private:
     CameraController m_cameraController;
 
     std::shared_ptr<Camera> m_camera;
-    std::shared_ptr<Camera> m_invCamera;
+    std::shared_ptr<Camera> m_reflectionCamera;
 
     // Global scene
     Scene m_scene;
@@ -86,6 +86,7 @@ private:
     float m_exposure;
     float m_contrast;
     float m_hueShift;
+    float m_pixelation;
     float m_saturation;
     glm::vec3 m_colorFilter;
     int m_blurIterations;

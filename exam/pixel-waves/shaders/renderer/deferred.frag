@@ -23,11 +23,6 @@ void main()
 	// Compute view vector en view space
 	vec3 viewDir = GetDirection(position, vec3(0));
 
-	// Convert position, normal and view vector to world space
-	position = (InvViewMatrix * vec4(position, 1)).xyz;
-	normal = (InvViewMatrix * vec4(normal, 0)).xyz;
-	viewDir = (InvViewMatrix * vec4(viewDir, 0)).xyz;
-
 	// Set surface material data
 	SurfaceData data;
 	data.normal = normal;
