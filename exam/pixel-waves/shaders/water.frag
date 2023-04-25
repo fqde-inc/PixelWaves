@@ -7,6 +7,8 @@ in vec3 WorldPosition;
 in vec3 WorldNormal;
 in vec2 TexCoord;
 
+in vec4 ClipSpace;
+
 out vec4 FragColor;
 
 // Water texture
@@ -28,17 +30,11 @@ uniform sampler2D SceneTexture;
 void main()
 {
 
-	// Transform the texture coordinates using the inverse view and projection matrices
-    vec4 clipSpace = ViewProjMatrix * vec4(TexCoord, 0.0, 1.0);
-    vec2 ndc = clipSpace.xy / clipSpace.w;
-    vec2 reflectedTexCoord = ndc * 0.5 + 0.5; // Convert to [0,1] range
-
 	// Reflection
-	reflectedTexCoord = vec2(reflectedTexCoord.x, 1.0f - reflectedTexCoord.y);
+	vec2 reflectedTexCoord = vec2(TexCoord.x, 1.0f - TexCoord.y);
 
 	// Water Tex
 	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, TexCoord * ColorTextureScale);
-
 
 	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
 

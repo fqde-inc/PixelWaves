@@ -84,17 +84,14 @@ void PixelWavesApplication::Update()
 
     m_camera->ExtractVectors(a, up, f);
  
-    glm::vec3 translation = glm::vec3(viewMatrix[3]); 
-    translation.y = - translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
+    glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation()); 
+    translation.y = translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
 
-    glm::mat4 refViewMatrix = glm::lookAt(translation, f, up);
-
-    m_reflectionCamera->SetViewMatrix(refViewMatrix);
+    m_reflectionCamera->SetViewMatrix(translation, f);
 
     // Add the scene nodes to the renderer
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
-
 
 
     // Water
@@ -168,12 +165,6 @@ void PixelWavesApplication::InitializeLights()
 
 void PixelWavesApplication::InitializeTextures()
 {
-    m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
-    m_waterTexture->Bind();
-    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
-    m_waterTexture->GenerateMipmap();
-    Texture2DObject::Unbind();
 
 }
 
@@ -426,7 +417,7 @@ void PixelWavesApplication::InitializeWaterMesh()
         for (unsigned int i = 0; i < columnCount; ++i)
         {
             // Vertex data for this vertex only
-            glm::vec3 position( i - pos.x, 0.0f, j - pos.y);
+            glm::vec3 position( i  , 0.0f, j );
             glm::vec3 normal(0.0f, 1.0f, 0.0f);
             glm::vec2 texCoord(i, j);
             vertices.emplace_back(position, normal, texCoord);
@@ -485,11 +476,11 @@ void PixelWavesApplication::InitializeFramebuffers()
     FramebufferObject::Unbind();
 
     // Water texture
-    m_waterTexture = std::make_shared<Texture2DObject>();
+    m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
     m_waterTexture->Bind();
-    m_waterTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
     m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
     m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+    m_waterTexture->GenerateMipmap();
     Texture2DObject::Unbind();
 
     // Water framebuffer
@@ -524,8 +515,9 @@ void PixelWavesApplication::InitializeRenderer()
     int width, height;
     GetMainWindow().GetDimensions(width, height);
 
+
     // Flip camera
-    m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
+    //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
 
     // Set up deferred passes
     {
@@ -553,9 +545,8 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Set up deferred passes
     {
-
         // Flip camera
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
 
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
 
@@ -573,7 +564,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0]));
 
         // Flip camera
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
     }
 
     // Skybox pass
@@ -582,6 +573,7 @@ void PixelWavesApplication::InitializeRenderer()
     // Water pass
     {
         m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], glm::vec4(1.0f), m_sceneFramebuffer));
+        //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_sceneFramebuffer));
     }
 
     //Post-processing
@@ -589,7 +581,7 @@ void PixelWavesApplication::InitializeRenderer()
         std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
 
         // Create a copy pass from m_sceneTexture to the first temporary texture
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[1]));
 
         // Final pass
         m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
@@ -605,7 +597,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
 
         // Set the bloom texture uniform
-        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
+        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[1]);
 
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
     }

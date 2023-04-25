@@ -7,6 +7,9 @@ out vec3 WorldPosition;
 out vec3 WorldNormal;
 out vec2 TexCoord;
 
+out vec4 ClipSpace;
+
+uniform mat4 ViewProjMatrix;
 uniform mat4 WorldMatrix;
 uniform mat4 WorldViewMatrix;
 uniform mat4 WorldViewProjMatrix;
@@ -26,7 +29,25 @@ void main()
 
 	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
 	
-	TexCoord = VertexTexCoord;
+	//TexCoord = VertexTexCoord;
+	//ClipSpace = ViewProjMatrix * vec4( WorldPosition, 1.0 );
 
-	gl_Position = WorldViewProjMatrix * vec4(WorldPosition, 1.0) ;
+	//gl_Position = WorldViewProjMatrix * vec4(WorldPosition, 1.0) ;
+	//gl_Position = ViewProjMatrix * vec4( WorldPosition, 1.0 );
+
+
+
+
+	// Calculate the texture matrix by post-multiplying compositeMatrix with the inverse of pixelSize
+    mat4 textureMatrix = WorldViewProjMatrix * (1.0f/4.0f);
+    
+    // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
+    vec4 texCoords = textureMatrix * vec4(VertexPosition, 1.0);
+    
+    // Output the texture coordinates
+    TexCoord = texCoords.xy;
+    
+    // Output the vertex position
+	gl_Position = WorldViewProjMatrix * vec4( WorldPosition, 1.0 );
+
 }
