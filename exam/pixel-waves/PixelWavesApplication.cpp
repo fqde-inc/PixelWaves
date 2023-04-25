@@ -84,11 +84,10 @@ void PixelWavesApplication::Update()
 
     m_camera->ExtractVectors(a, up, f);
  
-    // Invert pitch by negating the x-axis rotation
     glm::vec3 translation = glm::vec3(viewMatrix[3]); 
-    translation.y = -translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
+    translation.y = - translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
 
-    glm::mat4 refViewMatrix = glm::lookAt(translation, f, glm::vec3(0, 1.0f, 0));
+    glm::mat4 refViewMatrix = glm::lookAt(translation, f, up);
 
     m_reflectionCamera->SetViewMatrix(refViewMatrix);
 
@@ -250,7 +249,7 @@ void PixelWavesApplication::InitializeMaterials()
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
-                shaderProgram.SetUniform(viewProjLocation, camera.GetViewProjectionMatrix() * camera.GetViewMatrix() );
+                shaderProgram.SetUniform(viewProjLocation, camera.GetProjectionMatrix() * camera.GetViewMatrix() );
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
                 shaderProgram.SetUniform(timeLocation, GetCurrentTime());
@@ -413,9 +412,9 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 6;
+    int size = 4.0f;
     glm::vec2 pos = glm::vec2(size/2.0f);
-    glm::vec2 scale(size / (size - 1), size / (size - 1));
+    glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
     // Number of columns and rows
     unsigned int columnCount = size;
@@ -427,7 +426,7 @@ void PixelWavesApplication::InitializeWaterMesh()
         for (unsigned int i = 0; i < columnCount; ++i)
         {
             // Vertex data for this vertex only
-            glm::vec3 position( (i * scale.x) - pos.x, 0.1f, (j * scale.y) - pos.y);
+            glm::vec3 position( i - pos.x, 0.0f, j - pos.y);
             glm::vec3 normal(0.0f, 1.0f, 0.0f);
             glm::vec2 texCoord(i, j);
             vertices.emplace_back(position, normal, texCoord);
@@ -525,6 +524,9 @@ void PixelWavesApplication::InitializeRenderer()
     int width, height;
     GetMainWindow().GetDimensions(width, height);
 
+    // Flip camera
+    m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
+
     // Set up deferred passes
     {
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
@@ -553,7 +555,7 @@ void PixelWavesApplication::InitializeRenderer()
     {
 
         // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
 
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
 
@@ -571,7 +573,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0]));
 
         // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
     }
 
     // Skybox pass

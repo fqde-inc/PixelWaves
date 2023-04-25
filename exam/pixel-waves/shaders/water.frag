@@ -29,18 +29,19 @@ void main()
 {
 
 	// Transform the texture coordinates using the inverse view and projection matrices
-    vec4 viewSpace = ViewProjMatrix * vec4(TexCoord, 0.0, 1.0);
-    vec2 ndc = viewSpace.xy / viewSpace.w;
+    vec4 clipSpace = ViewProjMatrix * vec4(TexCoord, 0.0, 1.0);
+    vec2 ndc = clipSpace.xy / clipSpace.w;
     vec2 reflectedTexCoord = ndc * 0.5 + 0.5; // Convert to [0,1] range
+
+	// Reflection
+	reflectedTexCoord = vec2(reflectedTexCoord.x, 1.0f - reflectedTexCoord.y);
 
 	// Water Tex
 	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, TexCoord * ColorTextureScale);
 
-	// Reflection
-	//reflectedTexCoord = vec2(TexCoord.x, 1.0 - TexCoord.y);
 
 	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
 
 	// Compose
-	FragColor = waterSample + vec4(SceneReflection.rgb, 0.2f);
+	FragColor = SceneReflection;
 }
