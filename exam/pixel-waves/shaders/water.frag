@@ -6,8 +6,7 @@ in vec2 VertexTexCoord;
 in vec3 WorldPosition;
 in vec3 WorldNormal;
 in vec2 TexCoord;
-
-in vec4 ClipSpace;
+in vec2 ReflectedTexCoord;
 
 out vec4 FragColor;
 
@@ -30,14 +29,12 @@ uniform sampler2D SceneTexture;
 void main()
 {
 
-	// Reflection
-	vec2 reflectedTexCoord = vec2(TexCoord.x, TexCoord.y);
-
 	// Water Tex
-	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, TexCoord * ColorTextureScale);
+	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );
 
-	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
+	// Reflections
+	vec4 SceneReflection = texture(SceneTexture, ReflectedTexCoord );
 
 	// Compose
-	FragColor = SceneReflection;
+	FragColor = vec4(Color.rgb, 0.005f) + vec4(SceneReflection.rgb, 0.8f);
 }

@@ -219,6 +219,14 @@ void PixelWavesApplication::InitializeMaterials()
 
     // Water material
     {
+        // Water texture
+        m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
+        m_waterTexture->Bind();
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+        m_waterTexture->GenerateMipmap();
+        Texture2DObject::Unbind();
+
         // Load and build shader
         std::vector<const char*> vertexShaderPaths;
         vertexShaderPaths.push_back("shaders/version330.glsl");
@@ -483,14 +491,6 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_sceneFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_sceneTexture);
     m_sceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
     FramebufferObject::Unbind();
-
-    // Water texture
-    m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
-    m_waterTexture->Bind();
-    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-    m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
-    m_waterTexture->GenerateMipmap();
-    Texture2DObject::Unbind();
 
     // Water framebuffer
     m_waterFramebuffer = std::make_shared<FramebufferObject>();

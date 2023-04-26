@@ -5,6 +5,7 @@ layout (location = 2) in vec2 VertexTexCoord;
 
 out vec3 WorldPosition;
 out vec3 WorldNormal;
+out vec2 ReflectedTexCoord;
 out vec2 TexCoord;
 
 out vec4 ClipSpace;
@@ -32,11 +33,13 @@ void main()
 	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
     
     // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
-    vec4 texCoords = MirrorViewMatrix * vec4(VertexPosition, 1.0);
+    vec4 reflectedTexCoord = MirrorViewMatrix * vec4(VertexPosition, 1.0);
     
     // Output the texture coordinates
-    TexCoord = texCoords.xy / texCoords.w;
-    TexCoord = TexCoord * 0.5 + 0.5;
+    ReflectedTexCoord = reflectedTexCoord.xy / reflectedTexCoord.w;
+    ReflectedTexCoord = ReflectedTexCoord * 0.5 + 0.5;
+
+    TexCoord = VertexTexCoord;
     
     // Output the vertex position
 	gl_Position = WorldViewProjMatrix * vec4( WorldPosition, 1.0 );
