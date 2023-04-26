@@ -80,14 +80,21 @@ void PixelWavesApplication::Update()
 
 
     glm::mat4 viewMatrix = m_camera->GetViewMatrix();
-    glm::vec3 a,up,f;
+    glm::mat4 reflectionMatrix = glm::mat4(1.0f);
+    reflectionMatrix[1][1] = -1.0f; // Reflect across the y-axis
 
-    m_camera->ExtractVectors(a, up, f);
- 
+    glm::vec3 right, up, forward;
+
+    m_camera->ExtractVectors(right, up, forward);
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation()); 
-    translation.y = translation.y; // Negate y position to move the camera in the opposite direction along the y-axis
+    translation.y *= -1.0f; // Reflect across the y-axis
 
-    m_reflectionCamera->SetViewMatrix(translation, f);
+    m_reflectionCamera->SetViewMatrix(translation, forward, up);
+
+    if (!m_cameraController.IsEnabled())
+        m_cameraController.GetCamera()->SetCamera(m_reflectionCamera);
+    else
+        m_cameraController.GetCamera()->SetCamera(m_camera);
 
     // Add the scene nodes to the renderer
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
