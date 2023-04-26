@@ -31,7 +31,7 @@ void main()
 {
 
 	// Reflection
-	vec2 reflectedTexCoord = vec2(TexCoord.x, 1.0f - TexCoord.y);
+	vec2 reflectedTexCoord = vec2(TexCoord.x, TexCoord.y);
 
 	// Water Tex
 	vec4 waterSample = vec4(Color.rgb, 0.1f) * texture( ColorTexture, TexCoord * ColorTextureScale);

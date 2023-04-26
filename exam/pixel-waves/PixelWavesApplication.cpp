@@ -78,22 +78,21 @@ void PixelWavesApplication::Update()
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
 
-
-    glm::mat4 viewMatrix = m_camera->GetViewMatrix();
-    glm::mat4 reflectionMatrix = glm::mat4(1.0f);
-    reflectionMatrix[1][1] = -1.0f; // Reflect across the y-axis
-
     glm::vec3 right, up, forward;
+    auto viewMatrix = m_camera->GetViewMatrix();
 
-    m_camera->ExtractVectors(right, up, forward);
-    glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation()); 
-    translation.y *= -1.0f; // Reflect across the y-axis
+    //m_camera->ExtractVectors(right, up, forward);
 
-    m_reflectionCamera->SetViewMatrix(translation, forward, up);
+    //glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation()); 
 
-    if (!m_cameraController.IsEnabled())
+    //translation.y *= -1.0f; // Reflect across the y-axis
+
+    m_reflectionCamera->SetViewMatrix( glm::scale ( viewMatrix, glm::vec3(1.0, -1.0,1.0) ));
+
+    if (m_mainWindow.IsKeyPressed(GLFW_KEY_0))
         m_cameraController.GetCamera()->SetCamera(m_reflectionCamera);
-    else
+
+    else if (m_mainWindow.IsKeyPressed(GLFW_KEY_1))
         m_cameraController.GetCamera()->SetCamera(m_camera);
 
     // Add the scene nodes to the renderer
@@ -138,11 +137,11 @@ void PixelWavesApplication::InitializeCamera()
     m_camera = std::make_shared<Camera>();
     m_reflectionCamera = std::make_shared<Camera>();
 
-    m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 0.5f, 0), glm::vec3(0, 1, 0));
+    m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 1.5f, 0), glm::vec3(0, 1, 0));
     m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
 
     // Reflection = -x
-    m_reflectionCamera->SetViewMatrix(glm::vec3(-2, -1, -2), glm::vec3(0, -0.5f, 0), glm::vec3(0, 1, 0));
+    m_reflectionCamera->SetViewMatrix(glm::vec3(-2, -1, -2), glm::vec3(0, -1.5f, 0), glm::vec3(0, 1, 0));
     m_reflectionCamera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
 
     // Create a scene node for the camera
@@ -237,6 +236,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Get transform related uniform locations
         ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
+        ShaderProgram::Location mirrorViewLocation = shaderProgramPtr->GetUniformLocation("MirrorViewMatrix");
         ShaderProgram::Location viewProjLocation = shaderProgramPtr->GetUniformLocation("ViewProjMatrix");
         ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
@@ -247,6 +247,7 @@ void PixelWavesApplication::InitializeMaterials()
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
+                shaderProgram.SetUniform(mirrorViewLocation, m_reflectionCamera->GetViewProjectionMatrix() );
                 shaderProgram.SetUniform(viewProjLocation, camera.GetProjectionMatrix() * camera.GetViewMatrix() );
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
@@ -260,6 +261,7 @@ void PixelWavesApplication::InitializeMaterials()
         filteredUniforms.insert("WorldMatrix");
         filteredUniforms.insert("WorldViewMatrix");
         filteredUniforms.insert("WorldViewProjMatrix");
+        
 
         // Create material
 
@@ -410,7 +412,7 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 4.0f;
+    int size = 8.0f;
     glm::vec2 pos = glm::vec2(size/2.0f);
     glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
@@ -424,9 +426,9 @@ void PixelWavesApplication::InitializeWaterMesh()
         for (unsigned int i = 0; i < columnCount; ++i)
         {
             // Vertex data for this vertex only
-            glm::vec3 position( i  , 0.0f, j );
+            glm::vec3 position(i - pos.x, 0.0f, j - pos.y);
             glm::vec3 normal(0.0f, 1.0f, 0.0f);
-            glm::vec2 texCoord(i, j);
+            glm::vec2 texCoord(i - pos.x, j - pos.y);
             vertices.emplace_back(position, normal, texCoord);
 
             // Index data for quad formed by previous vertices and current

@@ -60,7 +60,7 @@ private:
     // Set the new current time and compute the delta since the last time
     void UpdateTime(float newCurrentTime);
 
-private:
+protected:
     // OpenGL device
     DeviceGL m_device;
     // Main window

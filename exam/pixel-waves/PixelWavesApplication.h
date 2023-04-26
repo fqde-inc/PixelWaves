@@ -50,6 +50,7 @@ private:
 
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Camera> m_reflectionCamera;
+    bool m_renderFlip;
 
     // Global scene
     Scene m_scene;
