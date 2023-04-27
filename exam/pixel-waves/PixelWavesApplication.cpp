@@ -559,7 +559,7 @@ void PixelWavesApplication::InitializeRenderer()
         // Flip camera
         m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
 
-        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
+        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true));
 
         // Set the g-buffer textures as properties of the deferred material
         m_invDeferredMaterial->SetUniformValue("DepthTexture", gbufferRenderPass->GetDepthTexture());
@@ -572,7 +572,7 @@ void PixelWavesApplication::InitializeRenderer()
 
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
-        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0], true));
 
         // Flip camera
         m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));

@@ -8,8 +8,8 @@
 #include <ituGL/texture/Texture2DObject.h>
 #include <glm/gtx/transform.hpp>
 
-DeferredRenderPass::DeferredRenderPass(std::shared_ptr<Material> material, std::shared_ptr<const FramebufferObject> framebuffer)
-    : RenderPass(framebuffer), m_material(material)
+DeferredRenderPass::DeferredRenderPass(std::shared_ptr<Material> material, std::shared_ptr<const FramebufferObject> framebuffer, bool reflectionPass)
+    : RenderPass(framebuffer), m_material(material), m_reflectionPass (reflectionPass)
 {
     InitializeMeshes();
 }

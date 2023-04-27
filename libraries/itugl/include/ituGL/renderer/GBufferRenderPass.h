@@ -7,7 +7,7 @@ class Texture2DObject;
 class GBufferRenderPass : public RenderPass
 {
 public:
-    GBufferRenderPass(int width, int height, int drawcallCollectionIndex = 0);
+    GBufferRenderPass(int width, int height, int drawcallCollectionIndex = 0, bool reflection = false);
 
     void Render() override;
 
@@ -21,6 +21,8 @@ private:
     void InitFramebuffer();
 
 private:
+    bool m_reflectionPass;
+
     int m_drawcallCollectionIndex;
 
     std::shared_ptr<Texture2DObject> m_depthTexture;
