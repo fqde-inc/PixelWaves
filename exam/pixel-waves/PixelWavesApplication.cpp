@@ -194,6 +194,7 @@ void PixelWavesApplication::InitializeMaterials()
         shaderProgramPtr->Build(vertexShader, fragmentShader);
 
         // Get transform related uniform locations
+        ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
         ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
 
@@ -201,6 +202,7 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
+                shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
             },
@@ -209,6 +211,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Filter out uniforms that are not material properties
         ShaderUniformCollection::NameSet filteredUniforms;
+        filteredUniforms.insert("WorldMatrix");
         filteredUniforms.insert("WorldViewMatrix");
         filteredUniforms.insert("WorldViewProjMatrix");
 

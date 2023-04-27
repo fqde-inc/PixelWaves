@@ -83,6 +83,7 @@ void GBufferRenderPass::Render()
 
     if (m_reflectionPass) {
         glFrontFace(GL_CW);
+        glEnable(GL_CLIP_DISTANCE0);
     }
 
     const Camera& camera = renderer.GetCurrentCamera();
@@ -110,6 +111,7 @@ void GBufferRenderPass::Render()
 
     if (m_reflectionPass) {
         glFrontFace(GL_CCW);
+        glDisable(GL_CLIP_DISTANCE0);
     }
 
     renderer.GetDevice().SetFeatureEnabled(GL_FRAMEBUFFER_SRGB, wasSRGB);

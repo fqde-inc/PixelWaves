@@ -41,5 +41,5 @@ void main()
 
 	// Compose
 	else 
-		FragColor = Color + SceneReflection;
+		FragColor = vec4(SceneReflection.rgb, 0.8);
 }
