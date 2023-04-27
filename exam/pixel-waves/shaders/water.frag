@@ -28,6 +28,7 @@ uniform sampler2D SceneTexture;
 
 void main()
 {
+	vec4 Color = vec4(0.137,0.537,0.855, 0.2f);
 
 	// Water Tex
 	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );
@@ -35,6 +36,10 @@ void main()
 	// Reflections
 	vec4 SceneReflection = texture(SceneTexture, ReflectedTexCoord );
 
+	if(SceneReflection.r <= 0.0 && SceneReflection.g <= 0.0 && SceneReflection.b <= 0.0 )
+		FragColor = Color;
+
 	// Compose
-	FragColor = vec4(Color.rgb, 0.005f) + vec4(SceneReflection.rgb, 0.8f);
+	else 
+		FragColor = Color + SceneReflection;
 }

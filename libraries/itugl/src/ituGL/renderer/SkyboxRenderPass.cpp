@@ -36,6 +36,8 @@ void SkyboxRenderPass::SetTexture(std::shared_ptr<TextureCubemapObject> texture)
 
 void SkyboxRenderPass::Render()
 {
+    //return;
+
     Renderer& renderer = GetRenderer();
 
     m_shaderProgram.Use();

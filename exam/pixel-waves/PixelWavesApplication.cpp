@@ -341,7 +341,7 @@ void PixelWavesApplication::InitializeMaterials()
 
 void PixelWavesApplication::InitializeModels()
 {
-    m_skyboxTexture = TextureCubemapLoader::LoadTextureShared("models/skybox/yoga_studio.hdr", TextureObject::FormatRGB, TextureObject::InternalFormatRGB16F);
+    m_skyboxTexture = TextureCubemapLoader::LoadTextureShared("models/skybox/animeee.hdr", TextureObject::FormatRGB, TextureObject::InternalFormatRGB16F);
 
     m_skyboxTexture->Bind();
     float maxLod;
@@ -375,8 +375,10 @@ void PixelWavesApplication::InitializeModels()
     loader.SetMaterialProperty(ModelLoader::MaterialProperty::SpecularTexture, "SpecularTexture");
 
     // Load models
-    std::shared_ptr<Model> cannonModel = loader.LoadShared("models/cannon/cannon.obj");
+    std::shared_ptr<Model> cannonModel = loader.LoadShared("models/house/House.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
+    //m_scene.GetSceneNode("cannon")->GetTransform()->SetScale(glm::vec3(0.1f));
+    
 
     // Water
     //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
@@ -420,7 +422,7 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 8.0f;
+    int size = 16.0f;
     glm::vec2 pos = glm::vec2(size/2.0f);
     glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
@@ -509,7 +511,7 @@ void PixelWavesApplication::InitializeFramebuffers()
         m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
         m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
         m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
-
+        
         m_tempFramebuffers[i] = std::make_shared<FramebufferObject>();
         m_tempFramebuffers[i]->Bind();
         m_tempFramebuffers[i]->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_tempTextures[i]);

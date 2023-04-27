@@ -22,5 +22,6 @@ void main()
 	vec3 viewNormal = SampleNormalMap(NormalTexture, TexCoord, normalize(ViewNormal), normalize(ViewTangent), normalize(ViewBitangent));
 	FragNormal = viewNormal.xy;
 
-	FragOthers = texture(SpecularTexture, TexCoord);
+	//FragOthers = texture(SpecularTexture, TexCoord);
+	FragOthers = vec4(1.0,1.0,0,0);
 }
