@@ -77,7 +77,8 @@ void PixelWavesApplication::Update()
 
     // WaterHeight
     const float pi = 3.1416f;
-    waterHeight = 0.0 + 0.2 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    waterHeight = 0.0 + 0.1 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    //waterHeight = 0;
 
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
@@ -89,7 +90,7 @@ void PixelWavesApplication::Update()
     m_camera->ExtractVectors(right, up, forward);
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
   
-    translation -= glm:: vec3(0, 1.0f, 0)* (2 * (translation.y - waterHeight));
+    translation -= glm:: vec3(0, 1.0f, 0) * (2 * (translation.y) - waterHeight);
 
     forward = glm::reflect(forward, glm::vec3(0,1,0) );
     
@@ -211,7 +212,7 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
-                shaderProgram.SetUniform(waterPlaneLocation, glm::vec4( 0, 1.0f, 0, 0 ));
+                shaderProgram.SetUniform(waterPlaneLocation, glm::vec4( 0, 1.0f, 0, -GetWaterHeight()));
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
@@ -392,8 +393,6 @@ void PixelWavesApplication::InitializeModels()
     // Load models
     std::shared_ptr<Model> cannonModel = loader.LoadShared("models/house/House.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
-    //m_scene.GetSceneNode("cannon")->GetTransform()->SetScale(glm::vec3(0.1f));
-    
 
     // Water
     //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));

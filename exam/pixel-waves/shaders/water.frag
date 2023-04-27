@@ -29,7 +29,7 @@ uniform float Height;
 
 void main()
 {
-	vec4 Color = vec4(0.137,0.537,0.855, 0.1f);
+	vec4 Color = vec4(0.137,0.537,0.855, 0.7f);
 
 	// Water Tex
 	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );
@@ -42,5 +42,5 @@ void main()
 
 	// Compose
 	else 
-		FragColor = vec4(SceneReflection.rgb, 0.8);
+		FragColor = vec4(SceneReflection.rgb, 0.85f);
 }

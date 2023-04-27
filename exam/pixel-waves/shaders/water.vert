@@ -36,6 +36,8 @@ void main()
     // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
     vec4 reflectedTexCoord = MirrorViewMatrix * vec4(VertexPosition, 1.0);
     
+    reflectedTexCoord.y -= Height;
+
     // Output the texture coordinates
     ReflectedTexCoord = reflectedTexCoord.xy / reflectedTexCoord.w;
     ReflectedTexCoord = ReflectedTexCoord * 0.5 + 0.5;
