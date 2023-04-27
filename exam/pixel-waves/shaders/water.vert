@@ -17,6 +17,7 @@ uniform mat4 WorldMatrix;
 uniform mat4 WorldViewMatrix;
 uniform mat4 WorldViewProjMatrix;
 
+uniform float Height;
 uniform float Speed;
 uniform float Time;
 uniform	float Amplitude;
@@ -28,7 +29,7 @@ void main()
 
 	// Up down
 	float k = 2 * 3.14f / Wavelength;
-	WorldPosition.y += Amplitude * sin(k * ( WorldPosition.x - Time * Speed ));
+	WorldPosition.y += Height; // + ( Amplitude * sin(k * ( WorldPosition.x - Time * Speed )) );
 
 	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
     

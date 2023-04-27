@@ -35,6 +35,8 @@ private:
     void InitializeRenderer();
     void InitializeWaterMesh();
 
+    const float GetWaterHeight() { return waterHeight; };
+
     std::shared_ptr<Material> CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture = nullptr);
 
     Renderer::UpdateTransformsFunction GetFullscreenTransformFunction(std::shared_ptr<ShaderProgram> shaderProgramPtr) const;

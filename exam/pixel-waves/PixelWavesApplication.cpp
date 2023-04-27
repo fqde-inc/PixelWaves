@@ -37,7 +37,7 @@
 #include <imgui.h>
 
 PixelWavesApplication::PixelWavesApplication()
-    : Application(1024, 1024, "Post FX Scene Viewer demo")
+    : Application(1024, 1024, "Pixel Waves")
     , m_renderer(GetDevice())
     , m_sceneFramebuffer(std::make_shared<FramebufferObject>())
     , m_exposure(1.0f)
@@ -75,19 +75,33 @@ void PixelWavesApplication::Update()
 {
     Application::Update();
 
+    // WaterHeight
+    const float pi = 3.1416f;
+    waterHeight = 0.0 + 0.2 * sin(2 * pi * GetCurrentTime() / 15.0f);
+
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
 
-    glm::vec3 right, up, forward;
+    
     auto viewMatrix = m_camera->GetViewMatrix();
 
-    //m_camera->ExtractVectors(right, up, forward);
+    glm::vec3 right, up, forward;
+    m_camera->ExtractVectors(right, up, forward);
+    glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
+  
+    translation -= glm:: vec3(0, 1.0f, 0)* (2 * (translation.y - waterHeight));
 
-    //glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation()); 
+    forward = glm::reflect(forward, glm::vec3(0,1,0) );
+    
+    up *= -1.0f;
 
-    //translation.y *= -1.0f; // Reflect across the y-axis
+    auto reflectedMatrix = glm::lookAt(translation, forward, up );
 
-    m_reflectionCamera->SetViewMatrix( glm::scale ( viewMatrix, glm::vec3(1.0, -1.0,1.0) ));
+
+
+    //auto reflectedMatrix = glm::scale(viewMatrix, glm::vec3(1.0, -1.0, 1.0));
+
+    m_reflectionCamera->SetViewMatrix( reflectedMatrix);
 
     if (m_mainWindow.IsKeyPressed(GLFW_KEY_0))
         m_cameraController.GetCamera()->SetCamera(m_reflectionCamera);
@@ -99,15 +113,6 @@ void PixelWavesApplication::Update()
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
 
-
-    // Water
-    const float pi = 3.1416f;
-
-    //waterHeight = .05f +  0.01 * sin(2 * pi * GetCurrentTime() / 15.0f);
-    //auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
-    //auto trans = waterTransform->GetTranslation();
-    //trans.y = waterHeight;
-    //waterTransform->SetTranslation(trans);
 }
 
 void PixelWavesApplication::Render()
@@ -138,11 +143,11 @@ void PixelWavesApplication::InitializeCamera()
     m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 1.5f, 0), glm::vec3(0, 1, 0));
-    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
+    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.01f, 1000.0f);
 
     // Reflection = -x
     m_reflectionCamera->SetViewMatrix(glm::vec3(-2, -1, -2), glm::vec3(0, -1.5f, 0), glm::vec3(0, 1, 0));
-    m_reflectionCamera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.1f, 100.0f);
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.01f, 1000.0f);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -194,14 +199,19 @@ void PixelWavesApplication::InitializeMaterials()
         shaderProgramPtr->Build(vertexShader, fragmentShader);
 
         // Get transform related uniform locations
+        ShaderProgram::Location waterPlaneLocation = shaderProgramPtr->GetUniformLocation("WaterPlane");
+
+        // Get transform related uniform locations
         ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
         ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
 
         // Register shader with renderer
+        // Register shader with renderer
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
+                shaderProgram.SetUniform(waterPlaneLocation, glm::vec4( 0, 1.0f, 0, 0 ));
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
@@ -246,6 +256,7 @@ void PixelWavesApplication::InitializeMaterials()
         shaderProgramPtr->Build(vertexShader, fragmentShader);
 
         // Get transform related uniform locations
+        ShaderProgram::Location heightLocation = shaderProgramPtr->GetUniformLocation("Height");
         ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
         ShaderProgram::Location mirrorViewLocation = shaderProgramPtr->GetUniformLocation("MirrorViewMatrix");
         ShaderProgram::Location viewProjLocation = shaderProgramPtr->GetUniformLocation("ViewProjMatrix");
@@ -257,6 +268,7 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
+                shaderProgram.SetUniform(heightLocation, GetWaterHeight());
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(mirrorViewLocation, m_reflectionCamera->GetViewProjectionMatrix() );
                 shaderProgram.SetUniform(viewProjLocation, camera.GetProjectionMatrix() * camera.GetViewMatrix() );
@@ -275,10 +287,10 @@ void PixelWavesApplication::InitializeMaterials()
         
 
         // Create material
-
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
         m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         m_waterMaterial->SetUniformValue("ColorTexture", m_waterTexture);
+        m_waterMaterial->SetUniformValue("Height", 1.5f);
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
         m_waterMaterial->SetUniformValue("Amplitude", 0.01f);
         m_waterMaterial->SetUniformValue("Wavelength", 10.0f);

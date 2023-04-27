@@ -16,7 +16,7 @@ uniform mat4 WorldMatrix;
 uniform mat4 WorldViewMatrix;
 uniform mat4 WorldViewProjMatrix;
 
-const vec4 plane = vec4(0, 1, 0, 0);
+uniform vec4 WaterPlane;
 
 void main()
 {
@@ -35,6 +35,5 @@ void main()
 	// final vertex position (for opengl rendering, not for lighting)
 	gl_Position = WorldViewProjMatrix * vec4(VertexPosition, 1.0);
 
-	
-	gl_ClipDistance[0] = dot( WorldMatrix * vec4(VertexPosition,1.0) , plane);
+	gl_ClipDistance[0] = dot( WorldMatrix * vec4( VertexPosition, 1.0) , WaterPlane);
 }

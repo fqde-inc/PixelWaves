@@ -25,10 +25,11 @@ uniform mat4 InvProjMatrix;
 
 // Scene texture
 uniform sampler2D SceneTexture;
+uniform float Height;
 
 void main()
 {
-	vec4 Color = vec4(0.137,0.537,0.855, 0.2f);
+	vec4 Color = vec4(0.137,0.537,0.855, 0.1f);
 
 	// Water Tex
 	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );

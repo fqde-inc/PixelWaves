@@ -23,5 +23,5 @@ void main()
 	FragNormal = viewNormal.xy;
 
 	//FragOthers = texture(SpecularTexture, TexCoord);
-	FragOthers = vec4(1.0,1.0,0,0);
+	FragOthers = vec4(1.0, 1.0, 0, 0);
 }

@@ -82,7 +82,7 @@ void GBufferRenderPass::Render()
     Renderer& renderer = GetRenderer();
 
     if (m_reflectionPass) {
-        glFrontFace(GL_CW);
+        //glFrontFace(GL_CW);
         glEnable(GL_CLIP_DISTANCE0);
     }
 
@@ -110,7 +110,7 @@ void GBufferRenderPass::Render()
     }
 
     if (m_reflectionPass) {
-        glFrontFace(GL_CCW);
+        //glFrontFace(GL_CCW);
         glDisable(GL_CLIP_DISTANCE0);
     }
 
