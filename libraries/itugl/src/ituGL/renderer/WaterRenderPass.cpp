@@ -23,7 +23,6 @@ void WaterRenderPass::Render()
     //glEnable(GL_DEPTH_TEST);
 
     assert(m_material);
-
     assert(m_material->GetDepthWrite());
 
     m_material->SetUniformValue("DepthSampler", m_depth);

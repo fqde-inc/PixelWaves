@@ -5,12 +5,16 @@ layout (location = 2) in vec2 VertexTexCoord;
 
 out vec3 WorldPosition;
 out vec3 WorldNormal;
+
 out vec2 ReflectedTexCoord;
 out vec2 TexCoord;
+out vec2 DepthTexCoord;
 
 out vec4 ClipSpace;
 
 uniform mat4 MirrorViewMatrix;
+
+uniform mat4 DepthWorldMatrix;
 
 uniform mat4 ViewProjMatrix;
 uniform mat4 WorldMatrix;
@@ -25,26 +29,30 @@ uniform	float Wavelength;
 
 void main()
 {
+    // Output the vertex position
 	WorldPosition = (WorldMatrix * vec4(VertexPosition, 1.0)).xyz;
-
-	// Up down
-	float k = 2 * 3.14f / Wavelength;
-	WorldPosition.y += Height; // + ( Amplitude * sin(k * ( WorldPosition.x - Time * Speed )) );
-
-	WorldNormal = (WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
     
-    // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
-    vec4 reflectedTexCoord = MirrorViewMatrix * vec4(VertexPosition, 1.0);
+	// Add water height
+	float k = 2 * 3.14f / Wavelength;
+	WorldPosition.y += Height + ( Amplitude * sin(k * ( WorldPosition.x - Time * Speed )) );
 
-    // Output the texture coordinates
-    if(reflectedTexCoord.w == 0)
-        reflectedTexCoord.w = 1;
-    ReflectedTexCoord = reflectedTexCoord.xy / reflectedTexCoord.w;
-    ReflectedTexCoord = ReflectedTexCoord * 0.5 + 0.5;
+    // World normal
+	WorldNormal = ( WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
 
+    // Output vertex position
+	gl_Position = WorldViewProjMatrix * vec4( WorldPosition, 1.0 );
+    
+    // Output base tex coord
     TexCoord = VertexTexCoord;
     
-    // Output the vertex position
-	gl_Position = WorldViewProjMatrix * vec4( WorldPosition, 1.0 );
+    // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
+    vec4 reflectCoord = MirrorViewMatrix * vec4(WorldPosition, 1.0);
+
+    // Output the reflection texture coordinates
+    ReflectedTexCoord = (reflectCoord.xy / gl_Position.w) / 2.0 + 0.5;
+    
+    // Output the depth texture coordinates
+	//DepthTexCoord = (gl_Position.xy / gl_Position.w) * 0.5f + 0.5f;
+    DepthTexCoord = (reflectCoord.xy / gl_Position.w) / 2 + 0.5f;
 
 }

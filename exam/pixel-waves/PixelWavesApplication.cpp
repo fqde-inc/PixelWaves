@@ -40,6 +40,7 @@ PixelWavesApplication::PixelWavesApplication()
     : Application(1024, 1024, "Pixel Waves")
     , m_renderer(GetDevice())
     , m_sceneFramebuffer(std::make_shared<FramebufferObject>())
+    , m_reflectSceneFramebuffer(std::make_shared<FramebufferObject>())
     , m_exposure(1.0f)
     , m_contrast(1.06f)
     , m_hueShift(-0.07f)
@@ -77,12 +78,11 @@ void PixelWavesApplication::Update()
 
     // WaterHeight
     const float pi = 3.1416f;
-    waterHeight = 0.0 + 0.1 * sin(2 * pi * GetCurrentTime() / 15.0f);
-    //waterHeight = 0;
+    //waterHeight = 0.0 + 0.1 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    waterHeight = 0;
 
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
-
     
     auto viewMatrix = m_camera->GetViewMatrix();
 
@@ -110,12 +110,8 @@ void PixelWavesApplication::Update()
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
 
-
-
     auto transform = m_scene.GetSceneNode("House")->GetTransform();
     transform->SetTranslation(glm::vec3(0.0f, 0.5f, 0.0f));
-
-
 }
 
 void PixelWavesApplication::Render()
@@ -261,7 +257,6 @@ void PixelWavesApplication::InitializeMaterials()
         // Get transform related uniform locations
         ShaderProgram::Location heightLocation = shaderProgramPtr->GetUniformLocation("Height");
         ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
-        ShaderProgram::Location depthLocation = shaderProgramPtr->GetUniformLocation("DepthSampler");
         ShaderProgram::Location mirrorViewLocation = shaderProgramPtr->GetUniformLocation("MirrorViewMatrix");
         ShaderProgram::Location viewProjLocation = shaderProgramPtr->GetUniformLocation("ViewProjMatrix");
         ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
@@ -274,7 +269,9 @@ void PixelWavesApplication::InitializeMaterials()
             {
                 shaderProgram.SetUniform(heightLocation, GetWaterHeight());
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
+
                 shaderProgram.SetUniform(mirrorViewLocation, m_reflectionCamera->GetViewProjectionMatrix() );
+                
                 shaderProgram.SetUniform(viewProjLocation, camera.GetProjectionMatrix() * camera.GetViewMatrix() );
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
@@ -288,7 +285,6 @@ void PixelWavesApplication::InitializeMaterials()
         filteredUniforms.insert("WorldMatrix");
         filteredUniforms.insert("WorldViewMatrix");
         filteredUniforms.insert("WorldViewProjMatrix");
-        
 
         // Create material
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
@@ -320,6 +316,7 @@ void PixelWavesApplication::InitializeMaterials()
         Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
 
         std::shared_ptr<ShaderProgram> shaderProgramPtr = std::make_shared<ShaderProgram>();
+        std::shared_ptr<ShaderProgram> reflectShaderProgramPtr = std::make_shared<ShaderProgram>();
         shaderProgramPtr->Build(vertexShader, fragmentShader);
 
         // Filter out uniforms that are not material properties
@@ -342,20 +339,74 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
-               // if (cameraChanged)
-               // {
+               if (cameraChanged)
+               {
                     shaderProgram.SetUniform(invViewMatrixLocation, glm::inverse(camera.GetViewMatrix()));
                     shaderProgram.SetUniform(invProjMatrixLocation, glm::inverse(camera.GetProjectionMatrix()));
-               // }
+               }
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
             },
             m_renderer.GetDefaultUpdateLightsFunction(*shaderProgramPtr)
         );
 
-        // Create material
+        // Create materials
         m_deferredMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
+    }
+
+
+    // Reflection material
+    {
+        std::vector<const char*> vertexShaderPaths;
+        vertexShaderPaths.push_back("shaders/version330.glsl");
+        vertexShaderPaths.push_back("shaders/renderer/deferred.vert");
+        Shader vertexShader = ShaderLoader(Shader::VertexShader).Load(vertexShaderPaths);
+
+        std::vector<const char*> fragmentShaderPaths;
+        fragmentShaderPaths.push_back("shaders/version330.glsl");
+        fragmentShaderPaths.push_back("shaders/utils.glsl");
+        fragmentShaderPaths.push_back("shaders/lambert-ggx.glsl");
+        fragmentShaderPaths.push_back("shaders/lighting.glsl");
+        fragmentShaderPaths.push_back("shaders/renderer/deferred.frag");
+        Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
+
+        std::shared_ptr<ShaderProgram> shaderProgramPtr = std::make_shared<ShaderProgram>();
+        std::shared_ptr<ShaderProgram> reflectShaderProgramPtr = std::make_shared<ShaderProgram>();
+        shaderProgramPtr->Build(vertexShader, fragmentShader);
+
+        // Filter out uniforms that are not material properties
+        ShaderUniformCollection::NameSet filteredUniforms;
+        filteredUniforms.insert("InvViewMatrix");
+        filteredUniforms.insert("InvProjMatrix");
+        filteredUniforms.insert("WorldViewProjMatrix");
+        filteredUniforms.insert("LightIndirect");
+        filteredUniforms.insert("LightColor");
+        filteredUniforms.insert("LightPosition");
+        filteredUniforms.insert("LightDirection");
+        filteredUniforms.insert("LightAttenuation");
+
+        // Get transform related uniform locations
+        ShaderProgram::Location invViewMatrixLocation = shaderProgramPtr->GetUniformLocation("InvViewMatrix");
+        ShaderProgram::Location invProjMatrixLocation = shaderProgramPtr->GetUniformLocation("InvProjMatrix");
+        ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
+
+        // Register shader with renderer
+        m_renderer.RegisterShaderProgram(shaderProgramPtr,
+            [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
+            {
+                if (cameraChanged)
+                {
+                shaderProgram.SetUniform(invViewMatrixLocation, glm::inverse(camera.GetViewMatrix()));
+                shaderProgram.SetUniform(invProjMatrixLocation, glm::inverse(camera.GetProjectionMatrix()));
+                }
+                shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
+            },
+            m_renderer.GetDefaultUpdateLightsFunction(*shaderProgramPtr)
+        );
+
+        // Create materials
         m_invDeferredMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
     }
+
 }
 
 void PixelWavesApplication::InitializeModels()
@@ -399,20 +450,13 @@ void PixelWavesApplication::InitializeModels()
     
     // Water
     //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
-
     //auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
-    //waterTransform->SetScale(glm::vec3(4.0f));
     //waterTransform->SetTranslation(glm::vec3(-2.0f, 0, -2.0f));
 }
-
 
 void PixelWavesApplication::InitializeWaterMesh()
 {
     m_waterMesh = std::make_shared<Mesh>();
-    //m_waterModel = std::make_shared<Model>();
-
-    //m_waterModel->SetMesh(m_waterMesh);
-    //Mesh& mesh = m_waterModel->GetMesh();
     Mesh& mesh = *m_waterMesh.get();
 
     // Define the vertex structure
@@ -487,8 +531,6 @@ void PixelWavesApplication::InitializeWaterMesh()
         true /* interleaved */
     ), vertexFormat.LayoutEnd());
 
-    //m_waterModel->AddMaterial(m_waterMaterial);
-
 }
 
 void PixelWavesApplication::InitializeFramebuffers()
@@ -552,11 +594,49 @@ void PixelWavesApplication::InitializeRenderer()
     int width, height;
     GetMainWindow().GetDimensions(width, height);
 
+    // Reflection pass
+    {
+        // Flip camera
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_reflectSceneFramebuffer));
 
-    // Flip camera
-    //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
+        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true));
 
-    // Set up deferred passes
+        // Set the g-buffer textures as properties of the deferred material
+        m_invDeferredMaterial->SetUniformValue("DepthTexture", gbufferRenderPass->GetDepthTexture());
+        m_invDeferredMaterial->SetUniformValue("AlbedoTexture", gbufferRenderPass->GetAlbedoTexture());
+        m_invDeferredMaterial->SetUniformValue("NormalTexture", gbufferRenderPass->GetNormalTexture());
+        m_invDeferredMaterial->SetUniformValue("OthersTexture", gbufferRenderPass->GetOthersTexture());
+
+        // Get the depth texture from the gbuffer pass - This could be reworked
+        m_reflectDepthTexture = gbufferRenderPass->GetDepthTexture();
+
+        // Add the render passes
+        m_renderer.AddRenderPass(std::move(gbufferRenderPass));
+        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_reflectSceneFramebuffer, true));
+
+        // Flip camera
+        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_reflectSceneFramebuffer));
+
+        // Scene Texture
+        m_reflectSceneTexture = std::make_shared<Texture2DObject>();
+        m_reflectSceneTexture->Bind();
+        m_reflectSceneTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+        Texture2DObject::Unbind();
+
+        // Reflect scene framebuffer
+        m_reflectSceneFramebuffer->Bind();
+        m_reflectSceneFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Depth, *m_reflectDepthTexture);
+        m_reflectSceneFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_reflectSceneTexture);
+        m_reflectSceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
+        FramebufferObject::Unbind();
+
+        // Skybox pass
+        //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture, m_reflectSceneFramebuffer));
+    }
+
+    // Set up deferred pass ( Refraction )
     {
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
 
@@ -572,45 +652,17 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_deferredMaterial, m_sceneFramebuffer));
+        
+        // Skybox pass
+        m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
+
+        // Initialize the framebuffers and the textures they use
+        InitializeFramebuffers();
     }
-
-    // Initialize the framebuffers and the textures they use
-    InitializeFramebuffers();
-
-    // Skybox pass
-    m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture));
-
-    // Set up deferred passes
-    {
-        // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_tempFramebuffers[0]));
-
-        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true));
-
-        // Set the g-buffer textures as properties of the deferred material
-        m_invDeferredMaterial->SetUniformValue("DepthTexture", gbufferRenderPass->GetDepthTexture());
-        m_invDeferredMaterial->SetUniformValue("AlbedoTexture", gbufferRenderPass->GetAlbedoTexture());
-        m_invDeferredMaterial->SetUniformValue("NormalTexture", gbufferRenderPass->GetNormalTexture());
-        m_invDeferredMaterial->SetUniformValue("OthersTexture", gbufferRenderPass->GetOthersTexture());
-
-        // Get the depth texture from the gbuffer pass - This could be reworked
-        m_depthTexture = gbufferRenderPass->GetDepthTexture();
-
-        // Add the render passes
-        m_renderer.AddRenderPass(std::move(gbufferRenderPass));
-        m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_tempFramebuffers[0], true));
-
-        // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_tempFramebuffers[0]));
-    }
-
-    // Skybox pass
-    //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture, m_tempFramebuffers[0]));
 
     // Water pass
     {
-        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], m_depthTexture, m_sceneFramebuffer));
-        //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_sceneFramebuffer));
+        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_reflectSceneTexture, m_reflectDepthTexture, m_sceneFramebuffer));
     }
 
     //Post-processing
@@ -618,7 +670,7 @@ void PixelWavesApplication::InitializeRenderer()
         std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
 
         // Create a copy pass from m_sceneTexture to the first temporary texture
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[1]));
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
 
         // Final pass
         m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
@@ -634,7 +686,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
 
         // Set the bloom texture uniform
-        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[1]);
+        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
 
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
     }
