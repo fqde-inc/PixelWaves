@@ -36,6 +36,7 @@ private:
     void InitializeWaterMesh();
 
     const float GetWaterHeight() { return waterHeight; };
+    const glm::mat4 GetReflectWorldMatrix() { return m_worldReflectMatrix; };
 
     std::shared_ptr<Material> CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture = nullptr);
 
@@ -52,6 +53,7 @@ private:
 
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Camera> m_reflectionCamera;
+    glm::mat4 m_worldReflectMatrix;
     bool m_renderFlip;
 
     // Global scene
@@ -67,7 +69,7 @@ private:
     std::shared_ptr<Model> m_waterModel;
     std::shared_ptr<Mesh> m_waterMesh;
     std::shared_ptr<Texture2DObject> m_waterTexture;
-    float waterHeight = 2.5f;
+    float waterHeight = 0.0f;
 
     // Materials
     std::shared_ptr<Material> m_waterMaterial;
@@ -81,6 +83,8 @@ private:
     std::shared_ptr<FramebufferObject> m_sceneFramebuffer;
     std::shared_ptr<FramebufferObject> m_waterFramebuffer;
     std::shared_ptr<Texture2DObject> m_depthTexture;
+    std::shared_ptr<Texture2DObject> m_waterDepthTexture;
+    
     std::shared_ptr<Texture2DObject> m_sceneTexture;
     std::array<std::shared_ptr<FramebufferObject>, 2> m_tempFramebuffers;
     std::array<std::shared_ptr<Texture2DObject>, 2> m_tempTextures;

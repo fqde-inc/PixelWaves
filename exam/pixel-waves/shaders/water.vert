@@ -37,6 +37,8 @@ void main()
     vec4 reflectedTexCoord = MirrorViewMatrix * vec4(VertexPosition, 1.0);
 
     // Output the texture coordinates
+    if(reflectedTexCoord.w == 0)
+        reflectedTexCoord.w = 1;
     ReflectedTexCoord = reflectedTexCoord.xy / reflectedTexCoord.w;
     ReflectedTexCoord = ReflectedTexCoord * 0.5 + 0.5;
 

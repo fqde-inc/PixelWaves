@@ -41,11 +41,11 @@ PixelWavesApplication::PixelWavesApplication()
     , m_renderer(GetDevice())
     , m_sceneFramebuffer(std::make_shared<FramebufferObject>())
     , m_exposure(1.0f)
-    , m_contrast(1.0f)
-    , m_hueShift(0.0f)
-    , m_saturation(1.0f)
+    , m_contrast(1.06f)
+    , m_hueShift(-0.07f)
+    , m_saturation(1.4f)
     , m_colorFilter(1.0f)
-    , m_pixelation(128.0f)
+    , m_pixelation(256.0f)
     , m_blurIterations(1)
     , m_bloomRange(1.0f, 2.0f)
     , m_bloomIntensity(1.0f)
@@ -91,7 +91,7 @@ void PixelWavesApplication::Update()
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
   
     translation.y = - ( translation.y - waterHeight );
-    forward = glm::reflect(forward, glm::vec3(0,1,0) );
+    forward = glm::reflect(forward, glm::vec3(0, -1 ,0) );
     up *= -1.0f;
 
     auto reflectedMatrix = glm::lookAt(translation, forward, up );
@@ -109,6 +109,12 @@ void PixelWavesApplication::Update()
     // Add the scene nodes to the renderer
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
+
+
+
+    auto transform = m_scene.GetSceneNode("House")->GetTransform();
+    transform->SetTranslation(glm::vec3(0.0f, 0.5f, 0.0f));
+
 
 }
 
@@ -139,7 +145,7 @@ void PixelWavesApplication::InitializeCamera()
     m_camera = std::make_shared<Camera>();
     m_reflectionCamera = std::make_shared<Camera>();
 
-    m_camera->SetViewMatrix(glm::vec3(-2, 1, -2), glm::vec3(0, 1.5f, 0), glm::vec3(0, 1, 0));
+    m_camera->SetViewMatrix(glm::vec3(5, 1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
     m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.01f, 1000.0f);
 
     // Reflection = -x
@@ -208,7 +214,7 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
-                shaderProgram.SetUniform(waterPlaneLocation, glm::vec4( 0, 1.0f, 0, -GetWaterHeight()));
+                shaderProgram.SetUniform(waterPlaneLocation, glm::vec4( 0, 1.0f, 0, - GetWaterHeight()) );
                 shaderProgram.SetUniform(worldMatrixLocation, worldMatrix);
                 shaderProgram.SetUniform(worldViewMatrixLocation, camera.GetViewMatrix() * worldMatrix);
                 shaderProgram.SetUniform(worldViewProjMatrixLocation, camera.GetViewProjectionMatrix() * worldMatrix);
@@ -255,12 +261,13 @@ void PixelWavesApplication::InitializeMaterials()
         // Get transform related uniform locations
         ShaderProgram::Location heightLocation = shaderProgramPtr->GetUniformLocation("Height");
         ShaderProgram::Location timeLocation = shaderProgramPtr->GetUniformLocation("Time");
+        ShaderProgram::Location depthLocation = shaderProgramPtr->GetUniformLocation("DepthSampler");
         ShaderProgram::Location mirrorViewLocation = shaderProgramPtr->GetUniformLocation("MirrorViewMatrix");
         ShaderProgram::Location viewProjLocation = shaderProgramPtr->GetUniformLocation("ViewProjMatrix");
         ShaderProgram::Location worldMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldMatrix");
         ShaderProgram::Location worldViewMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewMatrix");
         ShaderProgram::Location worldViewProjMatrixLocation = shaderProgramPtr->GetUniformLocation("WorldViewProjMatrix");
-
+        
         // Register shader with renderer
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
@@ -387,9 +394,9 @@ void PixelWavesApplication::InitializeModels()
     loader.SetMaterialProperty(ModelLoader::MaterialProperty::SpecularTexture, "SpecularTexture");
 
     // Load models
-    std::shared_ptr<Model> cannonModel = loader.LoadShared("models/house/House.obj");
-    m_scene.AddSceneNode(std::make_shared<SceneModel>("cannon", cannonModel));
-
+    std::shared_ptr<Model> houseModel = loader.LoadShared("models/house/House.obj");
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("House", houseModel));
+    
     // Water
     //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
 
@@ -503,10 +510,19 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_sceneFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_sceneTexture);
     m_sceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
     FramebufferObject::Unbind();
+    
+    // Water depth
+    m_waterDepthTexture = std::make_shared<Texture2DObject>();
+    m_waterDepthTexture->Bind();
+    m_waterDepthTexture->SetImage(0, width, height, TextureObject::FormatDepth, TextureObject::InternalFormatDepth);
+    m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+    m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
+    Texture2DObject::Unbind();
 
     // Water framebuffer
     m_waterFramebuffer = std::make_shared<FramebufferObject>();
     m_waterFramebuffer->Bind();
+    m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Depth, *m_waterDepthTexture);
     m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_waterTexture);
     m_waterFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
     FramebufferObject::Unbind();
@@ -593,7 +609,7 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Water pass
     {
-        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], glm::vec4(1.0f), m_sceneFramebuffer));
+        m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_tempTextures[0], m_depthTexture, m_sceneFramebuffer));
         //m_renderer.AddRenderPass(std::make_unique<WaterRenderPass>(m_waterMaterial, m_waterMesh, m_sceneTexture, glm::vec4(1.0f), m_sceneFramebuffer));
     }
 
