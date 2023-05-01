@@ -90,15 +90,11 @@ void PixelWavesApplication::Update()
     m_camera->ExtractVectors(right, up, forward);
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
   
-    translation -= glm:: vec3(0, 1.0f, 0) * (2 * (translation.y) - waterHeight);
-
+    translation.y = - ( translation.y - waterHeight );
     forward = glm::reflect(forward, glm::vec3(0,1,0) );
-    
     up *= -1.0f;
 
     auto reflectedMatrix = glm::lookAt(translation, forward, up );
-
-
 
     //auto reflectedMatrix = glm::scale(viewMatrix, glm::vec3(1.0, -1.0, 1.0));
 
