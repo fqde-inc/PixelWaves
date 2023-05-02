@@ -78,8 +78,8 @@ void PixelWavesApplication::Update()
 
     // WaterHeight
     const float pi = 3.1416f;
-    //waterHeight = 0.0 + 0.1 * sin(2 * pi * GetCurrentTime() / 15.0f);
-    waterHeight = 0;
+    waterHeight = 0.0 + 0.05 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    //waterHeight = 0;
 
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
@@ -91,7 +91,7 @@ void PixelWavesApplication::Update()
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
   
     translation.y = - ( translation.y - waterHeight );
-    forward = glm::reflect(forward, glm::vec3(0, -1 ,0) );
+    forward = glm::reflect(forward, glm::vec3(0, 1 ,0) );
     up *= -1.0f;
 
     auto reflectedMatrix = glm::lookAt(translation, forward, up );
@@ -113,7 +113,7 @@ void PixelWavesApplication::Update()
 
     if (!placedModel) {
         auto transform = m_scene.GetSceneNode("House")->GetTransform();
-        transform->SetTranslation(glm::vec3(0.0f, 0.4f, 0.0f));
+        transform->SetTranslation(glm::vec3(0.0f, 0.45f, 0.0f));
         placedModel = true;
     }
 }
