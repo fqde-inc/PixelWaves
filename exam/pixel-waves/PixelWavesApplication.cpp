@@ -85,7 +85,7 @@ void PixelWavesApplication::Update()
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
     
     auto viewMatrix = m_camera->GetViewMatrix();
-
+    
     glm::vec3 right, up, forward;
     m_camera->ExtractVectors(right, up, forward);
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
@@ -95,6 +95,7 @@ void PixelWavesApplication::Update()
     up *= -1.0f;
 
     auto reflectedMatrix = glm::lookAt(translation, forward, up );
+
 
     //auto reflectedMatrix = glm::scale(viewMatrix, glm::vec3(1.0, -1.0, 1.0));
 
@@ -110,8 +111,11 @@ void PixelWavesApplication::Update()
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
     m_scene.AcceptVisitor(rendererSceneVisitor);
 
-    auto transform = m_scene.GetSceneNode("House")->GetTransform();
-    transform->SetTranslation(glm::vec3(0.0f, 0.5f, 0.0f));
+    if (!placedModel) {
+        auto transform = m_scene.GetSceneNode("House")->GetTransform();
+        transform->SetTranslation(glm::vec3(0.0f, 0.4f, 0.0f));
+        placedModel = true;
+    }
 }
 
 void PixelWavesApplication::Render()
@@ -234,8 +238,10 @@ void PixelWavesApplication::InitializeMaterials()
         // Water texture
         m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
         m_waterTexture->Bind();
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
         m_waterTexture->GenerateMipmap();
         Texture2DObject::Unbind();
 
@@ -288,7 +294,7 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Create material
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
-        m_waterMaterial->SetUniformValue("Color", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        m_waterMaterial->SetUniformValue("Color", glm::vec4(0.137, 0.537, 0.855, 0.7f) );
         m_waterMaterial->SetUniformValue("ColorTexture", m_waterTexture);
         m_waterMaterial->SetUniformValue("Height", 1.5f);
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
@@ -393,6 +399,8 @@ void PixelWavesApplication::InitializeMaterials()
         m_renderer.RegisterShaderProgram(shaderProgramPtr,
             [=](const ShaderProgram& shaderProgram, const glm::mat4& worldMatrix, const Camera& camera, bool cameraChanged)
             {
+                m_worldReflectMatrix = worldMatrix;
+
                 if (cameraChanged)
                 {
                 shaderProgram.SetUniform(invViewMatrixLocation, glm::inverse(camera.GetViewMatrix()));
@@ -483,7 +491,7 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 16.0f;
+    int size = 12.0f;
     glm::vec2 pos = glm::vec2(size/2.0f);
     glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
@@ -542,8 +550,10 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_sceneTexture = std::make_shared<Texture2DObject>();
     m_sceneTexture->Bind();
     m_sceneTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
-    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
+    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
+    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+    m_sceneTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
     Texture2DObject::Unbind();
 
     // Scene framebuffer
@@ -557,6 +567,8 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_waterDepthTexture = std::make_shared<Texture2DObject>();
     m_waterDepthTexture->Bind();
     m_waterDepthTexture->SetImage(0, width, height, TextureObject::FormatDepth, TextureObject::InternalFormatDepth);
+    m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
+    m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
     m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
     m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
     Texture2DObject::Unbind();
@@ -577,8 +589,8 @@ void PixelWavesApplication::InitializeFramebuffers()
         m_tempTextures[i]->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
         m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
         m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
         
         m_tempFramebuffers[i] = std::make_shared<FramebufferObject>();
         m_tempFramebuffers[i]->Bind();
@@ -621,8 +633,10 @@ void PixelWavesApplication::InitializeRenderer()
         m_reflectSceneTexture = std::make_shared<Texture2DObject>();
         m_reflectSceneTexture->Bind();
         m_reflectSceneTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
-        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_LINEAR);
-        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_LINEAR);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+        m_reflectSceneTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
         Texture2DObject::Unbind();
 
         // Reflect scene framebuffer

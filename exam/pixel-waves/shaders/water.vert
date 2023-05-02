@@ -6,7 +6,7 @@ layout (location = 2) in vec2 VertexTexCoord;
 out vec3 WorldPosition;
 out vec3 WorldNormal;
 
-out vec2 ReflectedTexCoord;
+out vec4 ReflectedTexCoord;
 out vec2 TexCoord;
 out vec2 DepthTexCoord;
 
@@ -29,10 +29,9 @@ uniform	float Wavelength;
 
 void main()
 {
-    // Output the vertex position
 	WorldPosition = (WorldMatrix * vec4(VertexPosition, 1.0)).xyz;
     
-	// Add water height
+	// Add water height and wave height
 	float k = 2 * 3.14f / Wavelength;
 	WorldPosition.y += Height + ( Amplitude * sin(k * ( WorldPosition.x - Time * Speed )) );
 
@@ -46,13 +45,6 @@ void main()
     TexCoord = VertexTexCoord;
     
     // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
-    vec4 reflectCoord = MirrorViewMatrix * vec4(WorldPosition, 1.0);
-
-    // Output the reflection texture coordinates
-    ReflectedTexCoord = (reflectCoord.xy / gl_Position.w) / 2.0 + 0.5;
-    
-    // Output the depth texture coordinates
-	//DepthTexCoord = (gl_Position.xy / gl_Position.w) * 0.5f + 0.5f;
-    DepthTexCoord = (reflectCoord.xy / gl_Position.w) / 2 + 0.5f;
+    ReflectedTexCoord = MirrorViewMatrix * vec4(WorldPosition, 1.0);
 
 }
