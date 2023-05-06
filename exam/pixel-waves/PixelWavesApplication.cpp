@@ -47,6 +47,7 @@ PixelWavesApplication::PixelWavesApplication()
     , m_saturation(1.4f)
     , m_colorFilter(1.0f)
     , m_pixelation(256.0f)
+    , m_downsampling(1.0f)
     , m_blurIterations(1)
     , m_bloomRange(1.0f, 2.0f)
     , m_bloomIntensity(1.0f)
@@ -787,9 +788,17 @@ void PixelWavesApplication::RenderGUI()
             {
                 m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
             }
-            if (ImGui::SliderFloat("Pixelation", &m_pixelation, 4.0f, 256.0f))
+
+            ImGui::Separator();
+
+            if (ImGui::SliderFloat("Pixelation", &m_pixelation, 144.0f, 1024.0f))
             {
                 m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
+            }
+
+            if (ImGui::SliderFloat("Downsampling", &m_downsampling, 1.0f,8.0f))
+            {
+                //m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
             }
 
             ImGui::Separator();

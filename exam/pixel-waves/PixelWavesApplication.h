@@ -100,6 +100,7 @@ private:
     float m_contrast;
     float m_hueShift;
     float m_pixelation;
+    float m_downsampling;
     float m_saturation;
     glm::vec3 m_colorFilter;
     int m_blurIterations;

@@ -56,9 +56,9 @@ void main()
 	
 	float depthDifference = sceneDepth - depth;
 
-	if( depthDifference <= 0 ) {
-		//FragColor = vec4(Color.rgb , 1.0) + vec4(0.3f);
-		//return;
+	if( depthDifference <= 0.000001 ) {
+		FragColor = vec4(Color.rgb , 1.0) + vec4(0.3f);
+		return;
 	}
 
 	// Water Tex
