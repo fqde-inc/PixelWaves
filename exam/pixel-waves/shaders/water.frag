@@ -33,8 +33,14 @@ uniform mat4 InvProjMatrix;
 uniform sampler2D SceneTexture;
 uniform float Height;
 
+uniform float Time;
+
 float near = 0.01; 
 float far  = 1000.0; 
+
+// distortion strength and scale
+float DistortionStrength = 0.0035f;
+float Amplitude = 0.1f;
 
 float LinearizeDepth(float depth) 
 {
@@ -44,7 +50,6 @@ float LinearizeDepth(float depth)
 
 void main()
 {
-
     // Output the reflection texture coordinates
     vec2 reflectedTexCoord = (ReflectedTexCoord.xy / ReflectedTexCoord.w) / 2.0 + 0.5;
     
@@ -65,7 +70,18 @@ void main()
 	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );
 
 	// Reflections
-	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord );
+
+	// calculate distortion strength based on distance from the center of the screen
+	float distance = length((gl_FragCoord.xy / vec2(textureSize(SceneTexture, 0))) - vec2(0.5));
+	float maxDistance = 0.5;
+	float distortionStrength = pow(1.0 - (distance / maxDistance), 4.0) * DistortionStrength;
+
+	// calculate distortion offset
+	float horizontalOffset = cos(Time * 5.0 + gl_FragCoord.y * Amplitude) * DistortionStrength;
+
+	reflectedTexCoord.x += horizontalOffset;
+
+	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);
 
 	if(SceneReflection.r <= 0.0 && SceneReflection.g <= 0.0 && SceneReflection.b <= 0.0 )
 		FragColor = Color;
