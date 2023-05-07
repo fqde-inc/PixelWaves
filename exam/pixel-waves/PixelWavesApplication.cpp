@@ -142,16 +142,14 @@ void PixelWavesApplication::Cleanup()
 
 void PixelWavesApplication::InitializeCamera()
 {
-    // Create the main camera
     m_camera = std::make_shared<Camera>();
     m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(5, 1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.01f, 1000.0f);
+    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.001f, 1000.0f);
 
-    // Reflection = -x
-    m_reflectionCamera->SetViewMatrix(glm::vec3(-2, -1, -2), glm::vec3(0, -1.5f, 0), glm::vec3(0, 1, 0));
-    m_reflectionCamera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.01f, 1000.0f);
+    m_reflectionCamera->SetViewMatrix(glm::vec3(5, -1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.001f, 1000.0f);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -159,7 +157,7 @@ void PixelWavesApplication::InitializeCamera()
     // Add the camera node to the scene
     m_scene.AddSceneNode(sceneCamera);
 
-    // Set the camera scene node to be controlled by the camera controller
+    // Set the main camera scene node to be controlled by the camera controller
     m_cameraController.SetCamera(sceneCamera);
 }
 

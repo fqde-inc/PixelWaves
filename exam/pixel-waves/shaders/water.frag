@@ -35,7 +35,7 @@ uniform float Height;
 
 uniform float Time;
 
-float near = 0.01; 
+float near = 0.001; 
 float far  = 1000.0; 
 
 // distortion strength and scale
@@ -61,7 +61,7 @@ void main()
 	
 	float depthDifference = sceneDepth - depth;
 
-	if( depthDifference <= 0.000001 ) {
+	if( depthDifference <= 0.00001 ) {
 		FragColor = vec4(Color.rgb , 1.0) + vec4(0.3f);
 		return;
 	}
