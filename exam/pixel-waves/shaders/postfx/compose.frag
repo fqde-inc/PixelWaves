@@ -9,13 +9,15 @@ uniform sampler2D SourceTexture;
 
 uniform float Exposure;
 
+uniform vec3 ColorFilter;
 uniform float Contrast;
 uniform float HueShift;
 uniform float Saturation;
-uniform vec3 ColorFilter;
 uniform float Pixelation;
+uniform int Downsampling;
+uniform float Sharpness;
 
-uniform sampler2D BloomTexture;
+vec2 Resolution = vec2(1024,1024);
 
 vec3 AdjustContrast(vec3 color)
 {
@@ -42,21 +44,30 @@ vec3 ApplyColorFilter(vec3 color)
 	return color * ColorFilter;
 }
 
+vec3 ApplySharpen (sampler2D tex, vec2 fragCoord)
+{   
+	vec2 step = 1.0 / Resolution;
+	
+	vec3 up		= texture( tex, fragCoord + vec2( 0, step.y) ).rgb;
+	vec3 left	= texture( tex, fragCoord + vec2( -step.x, 0) ).rgb;
+	vec3 right	= texture( tex, fragCoord + vec2( step.x, 0) ).rgb;
+	vec3 down	= texture( tex, fragCoord + vec2( 0, -step.y) ).rgb;
+
+    vec3 around = 0.25 * (up + left + right + down);
+	vec3 center  = texture( tex, fragCoord ).rgb;
+    
+	return center + (center - around) * Sharpness;
+}
 
 void main()
 {
-	
-	// pixelate
-	float pixelationLevel = Pixelation;
-	vec2 roundedTexCoord = floor(TexCoord * pixelationLevel) / pixelationLevel;
+	float pixelation = Resolution.x / Downsampling;
+
+	// Pixelate
+	vec2 roundedTexCoord = floor(TexCoord * pixelation) / pixelation;
 
 	// Read from the HDR framebuffer
-	//vec3 hdrColor = texture(SourceTexture, TexCoord).rgb;
 	vec3 hdrColor = texture(SourceTexture, roundedTexCoord).rgb;
-
-	// Add bloom
-	//hdrColor += texture(BloomTexture, TexCoord).rgb;
-	hdrColor += texture(BloomTexture, roundedTexCoord).rgb;
 
 	// Apply exposure
 	vec3 color = vec3(1.0f) - exp(-hdrColor * Exposure);
@@ -67,6 +78,12 @@ void main()
 	color = AdjustSaturation(color);
 	color = ApplyColorFilter(color);
 
+	// Apply sharpen
+    vec3 sharpenedColor = ApplySharpen(SourceTexture, roundedTexCoord);
+
+    // Combine sharpened and original color
+    color = mix(color, sharpenedColor.rgb, 0.5f);
+
 	// Assign the fragment color
-	FragColor = vec4(color, 1.0f);
+	FragColor = vec4(color.rgb, 1.0f);
 }

@@ -44,6 +44,7 @@ PixelWavesApplication::PixelWavesApplication()
     , m_exposure(1.0f)
     , m_contrast(1.06f)
     , m_hueShift(-0.07f)
+    , m_sharpness(0.5f)
     , m_saturation(1.4f)
     , m_colorFilter(1.0f)
     , m_pixelation(256.0f)
@@ -484,7 +485,7 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 12.0f;
+    int size = 16.0f;
     glm::vec2 pos = glm::vec2(size/2.0f);
     glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
@@ -682,18 +683,15 @@ void PixelWavesApplication::InitializeRenderer()
         // Final pass
         m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
 
-        // Set exposure uniform default value
+        // Set uniform default value
         m_composeMaterial->SetUniformValue("Exposure", m_exposure);
-
-        // Set uniform default values
         m_composeMaterial->SetUniformValue("Contrast", m_contrast);
         m_composeMaterial->SetUniformValue("HueShift", m_hueShift);
         m_composeMaterial->SetUniformValue("Saturation", m_saturation);
         m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
         m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
-
-        // Set the bloom texture uniform
-        m_composeMaterial->SetUniformValue("BloomTexture", m_tempTextures[0]);
+        m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
+        m_composeMaterial->SetUniformValue("Sharpness", m_sharpness);
 
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
     }
@@ -776,6 +774,10 @@ void PixelWavesApplication::RenderGUI()
             {
                 m_composeMaterial->SetUniformValue("Saturation", m_saturation);
             }
+            if (ImGui::SliderFloat("Sharpness", &m_sharpness, 0.0f, 2.0f))
+            {
+                m_composeMaterial->SetUniformValue("Sharpness", m_sharpness);
+            }
             if (ImGui::ColorEdit3("Color Filter", &m_colorFilter[0]))
             {
                 m_composeMaterial->SetUniformValue("ColorFilter", m_colorFilter);
@@ -783,15 +785,38 @@ void PixelWavesApplication::RenderGUI()
 
             ImGui::Separator();
 
-            if (ImGui::SliderFloat("Pixelation", &m_pixelation, 144.0f, 1024.0f))
-            {
-                m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
+
+            if (ImGui::RadioButton("1x", &m_downsampling, 1)) {
+                m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
             }
 
-            if (ImGui::SliderFloat("Downsampling", &m_downsampling, 1.0f,8.0f))
-            {
-                m_composeMaterial->SetUniformValue("Downsampling", m_pixelation);
+            ImGui::SameLine();
+
+            if (ImGui::RadioButton("2x", &m_downsampling, 2)) {
+                m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
             }
+
+            ImGui::SameLine();
+
+            if (ImGui::RadioButton("3x", &m_downsampling, 3)) {
+                m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
+            }
+
+            ImGui::SameLine();
+            
+            if (ImGui::RadioButton("4x", &m_downsampling, 4)) {
+                m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
+            }
+
+            ImGui::SameLine();
+            
+            if (ImGui::RadioButton("5x", &m_downsampling, 5)) {
+                m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
+            }
+
+            ImGui::SameLine();
+
+            ImGui::Text("Downsampling");
         }
     }
 
@@ -799,7 +824,7 @@ void PixelWavesApplication::RenderGUI()
     {
         if (m_waterMaterial)
         {
-            if (ImGui::DragFloat("Speed", &m_distortionSpeed, 0.1f, 1.0f, 10.0f))
+            if (ImGui::DragFloat("Speed", &m_distortionSpeed, 0.01f, 1.0f, 10.0f))
             {
                 m_waterMaterial->SetUniformValue("DistortionSpeed", m_distortionSpeed);
             }

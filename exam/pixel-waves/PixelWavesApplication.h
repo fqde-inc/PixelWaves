@@ -82,7 +82,6 @@ private:
     std::shared_ptr<Material> m_deferredMaterial;
     std::shared_ptr<Material> m_invDeferredMaterial;
     std::shared_ptr<Material> m_composeMaterial;
-    std::shared_ptr<Material> m_bloomMaterial;
 
     // Framebuffers
     std::shared_ptr<FramebufferObject> m_sceneFramebuffer;
@@ -110,8 +109,9 @@ private:
     float m_contrast;
     float m_hueShift;
     float m_pixelation;
-    float m_downsampling;
+    int m_downsampling;
     float m_saturation;
+    float m_sharpness;
     glm::vec3 m_colorFilter;
 
     // Camera settings
