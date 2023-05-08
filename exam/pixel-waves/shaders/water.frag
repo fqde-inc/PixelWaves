@@ -35,12 +35,13 @@ uniform float Height;
 
 uniform float Time;
 
-float near = 0.001; 
+float near = 0.01; 
 float far  = 1000.0; 
 
-// distortion strength and scale
-float DistortionStrength = 0.0035f;
-float Amplitude = 0.1f;
+// Distortion settings
+uniform float DistortionStrength;
+uniform float DistortionFrequency;
+uniform float DistortionSpeed;
 
 float LinearizeDepth(float depth) 
 {
@@ -70,15 +71,8 @@ void main()
 	vec4 waterSample = Color * texture( ColorTexture, TexCoord * 0.15f );
 
 	// Reflections
-
-	// calculate distortion strength based on distance from the center of the screen
-	float distance = length((gl_FragCoord.xy / vec2(textureSize(SceneTexture, 0))) - vec2(0.5));
-	float maxDistance = 0.5;
-	float distortionStrength = pow(1.0 - (distance / maxDistance), 4.0) * DistortionStrength;
-
-	// calculate distortion offset
-	float horizontalOffset = cos(Time * 5.0 + gl_FragCoord.y * Amplitude) * DistortionStrength;
-
+	// Calculate distortion offset
+	float horizontalOffset = cos( Time * DistortionSpeed + gl_FragCoord.y * DistortionFrequency) * DistortionStrength;
 	reflectedTexCoord.x += horizontalOffset;
 
 	vec4 SceneReflection = texture(SceneTexture, reflectedTexCoord);

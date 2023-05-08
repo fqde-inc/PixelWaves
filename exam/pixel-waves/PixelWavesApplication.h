@@ -51,8 +51,13 @@ private:
     // Camera controller
     CameraController m_cameraController;
 
+
+    // Camera settings
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Camera> m_reflectionCamera;
+    float nearPlane;
+    float farPlane;
+
     glm::mat4 m_worldReflectMatrix;
     bool m_renderFlip;
 
@@ -95,7 +100,12 @@ private:
     std::array<std::shared_ptr<FramebufferObject>, 2> m_tempFramebuffers;
     std::array<std::shared_ptr<Texture2DObject>, 2> m_tempTextures;
 
-    // Configuration values
+    // Water configuration values
+    float m_distortionFrequency;
+    float m_distortionStrength;
+    float m_distortionSpeed;
+
+    // Post-procesing configuration values
     float m_exposure;
     float m_contrast;
     float m_hueShift;
@@ -103,8 +113,7 @@ private:
     float m_downsampling;
     float m_saturation;
     glm::vec3 m_colorFilter;
-    int m_blurIterations;
-    glm::vec2 m_bloomRange;
-    float m_bloomIntensity;
+
+    // Camera settings
     bool placedModel = false;
 };

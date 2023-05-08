@@ -48,9 +48,9 @@ PixelWavesApplication::PixelWavesApplication()
     , m_colorFilter(1.0f)
     , m_pixelation(256.0f)
     , m_downsampling(1.0f)
-    , m_blurIterations(1)
-    , m_bloomRange(1.0f, 2.0f)
-    , m_bloomIntensity(1.0f)
+    , m_distortionSpeed(2.5f)
+    , m_distortionStrength(0.0035f)
+    , m_distortionFrequency(0.1f)
 {
 }
 
@@ -80,7 +80,6 @@ void PixelWavesApplication::Update()
     // WaterHeight
     const float pi = 3.1416f;
     waterHeight = 0.0 + 0.05 * sin(2 * pi * GetCurrentTime() / 15.0f);
-    //waterHeight = 0;
 
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
@@ -93,20 +92,9 @@ void PixelWavesApplication::Update()
   
     translation.y = - ( translation.y - waterHeight );
     forward = glm::reflect(forward, glm::vec3(0, 1 ,0) );
-    up *= -1.0f;
+    //up *= -1.0f;
 
-    auto reflectedMatrix = glm::lookAt(translation, forward, up );
-
-
-    //auto reflectedMatrix = glm::scale(viewMatrix, glm::vec3(1.0, -1.0, 1.0));
-
-    m_reflectionCamera->SetViewMatrix( reflectedMatrix);
-
-    if (m_mainWindow.IsKeyPressed(GLFW_KEY_0))
-        m_cameraController.GetCamera()->SetCamera(m_reflectionCamera);
-
-    else if (m_mainWindow.IsKeyPressed(GLFW_KEY_1))
-        m_cameraController.GetCamera()->SetCamera(m_camera);
+    m_reflectionCamera->SetViewMatrix(glm::lookAt(translation, forward, up) );
 
     // Add the scene nodes to the renderer
     RendererSceneVisitor rendererSceneVisitor(m_renderer);
@@ -146,10 +134,10 @@ void PixelWavesApplication::InitializeCamera()
     m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(5, 1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_camera->SetPerspectiveProjectionMatrix(1.0f, 1.0f, 0.001f, 1000.0f);
+    m_camera->SetPerspectiveProjectionMatrix(45.0f, 1.0f, 0.01f, 1000.0f);
 
     m_reflectionCamera->SetViewMatrix(glm::vec3(5, -1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.001f, 1000.0f);
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.01f, 1000.0f);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -300,7 +288,13 @@ void PixelWavesApplication::InitializeMaterials()
         m_waterMaterial->SetUniformValue("Amplitude", 0.01f);
         m_waterMaterial->SetUniformValue("Wavelength", 10.0f);
         m_waterMaterial->SetUniformValue("Time", GetCurrentTime());
+
+        m_waterMaterial->SetUniformValue("DistortionSpeed", m_distortionSpeed);
+        m_waterMaterial->SetUniformValue("DistortionStrength", m_distortionStrength);
+        m_waterMaterial->SetUniformValue("DistortionFrequency", m_distortionFrequency);
+
         m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
+
         m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
         m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
     }
@@ -796,18 +790,28 @@ void PixelWavesApplication::RenderGUI()
 
             if (ImGui::SliderFloat("Downsampling", &m_downsampling, 1.0f,8.0f))
             {
-                //m_composeMaterial->SetUniformValue("Pixelation", m_pixelation);
+                m_composeMaterial->SetUniformValue("Downsampling", m_pixelation);
+            }
+        }
+    }
+
+    if (auto window = m_imGui.UseWindow("Distortion"))
+    {
+        if (m_waterMaterial)
+        {
+            if (ImGui::DragFloat("Speed", &m_distortionSpeed, 0.1f, 1.0f, 10.0f))
+            {
+                m_waterMaterial->SetUniformValue("DistortionSpeed", m_distortionSpeed);
             }
 
-            ImGui::Separator();
-
-            if (ImGui::DragFloat2("Bloom Range", &m_bloomRange[0], 0.1f, 0.1f, 10.0f))
+            if (ImGui::DragFloat("Frequency", &m_distortionFrequency, 0.001f, 0.1f, 1.0f))
             {
-                m_bloomMaterial->SetUniformValue("Range", m_bloomRange);
+                m_waterMaterial->SetUniformValue("DistortionFrequency", m_distortionFrequency);
             }
-            if (ImGui::DragFloat("Bloom Intensity", &m_bloomIntensity, 0.1f, 0.0f, 5.0f))
+
+            if (ImGui::DragFloat("Strength", &m_distortionStrength, 0.0001f, 0.0f, 0.1f))
             {
-                m_bloomMaterial->SetUniformValue("Intensity", m_bloomIntensity);
+                m_waterMaterial->SetUniformValue("DistortionStrength", m_distortionStrength);
             }
         }
     }
