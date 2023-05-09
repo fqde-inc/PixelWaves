@@ -7,8 +7,8 @@
 #include <ituGL/texture/Texture2DObject.h>
 #include <ituGL/texture/FramebufferObject.h>
 
-GBufferRenderPass::GBufferRenderPass(int width, int height, int drawcallCollectionIndex, bool reflectionPass)
-    : m_drawcallCollectionIndex(drawcallCollectionIndex), m_reflectionPass(reflectionPass)
+GBufferRenderPass::GBufferRenderPass(int width, int height, int drawcallCollectionIndex, bool reflectionPass, std::shared_ptr<Camera> camera)
+    : m_drawcallCollectionIndex(drawcallCollectionIndex), m_reflectionPass(reflectionPass), m_targetCamera(camera)
 {
     InitTextures(width, height);
     InitFramebuffer();
@@ -84,7 +84,11 @@ void GBufferRenderPass::Render()
     Renderer& renderer = GetRenderer();
 
     if (m_reflectionPass) {
-        //glFrontFace(GL_CW);
+        if (m_targetCamera != nullptr) {
+            m_tempCamera = renderer.GetCurrentCamera();
+            renderer.SetCurrentCamera(*m_targetCamera);
+        }
+
         glEnable(GL_CLIP_DISTANCE0);
     }
 
@@ -112,8 +116,11 @@ void GBufferRenderPass::Render()
     }
 
     if (m_reflectionPass) {
-        //glFrontFace(GL_CCW);
         glDisable(GL_CLIP_DISTANCE0);
+
+        if ( m_targetCamera != nullptr ) {
+            renderer.SetCurrentCamera(m_tempCamera);
+        }
     }
 
     renderer.GetDevice().SetFeatureEnabled(GL_FRAMEBUFFER_SRGB, wasSRGB);

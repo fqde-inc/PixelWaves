@@ -39,6 +39,7 @@ private:
     const glm::mat4 GetReflectWorldMatrix() { return m_worldReflectMatrix; };
 
     std::shared_ptr<Material> CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture = nullptr);
+    std::shared_ptr<Material> CreateCombineMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture = nullptr);
 
     Renderer::UpdateTransformsFunction GetFullscreenTransformFunction(std::shared_ptr<ShaderProgram> shaderProgramPtr) const;
 
@@ -91,6 +92,7 @@ private:
     std::shared_ptr<Texture2DObject> m_reflectSceneTexture;
 
     std::shared_ptr<Texture2DObject> m_depthTexture;
+    std::shared_ptr<Texture2DObject> m_depthTextureCopy;
     std::shared_ptr<Texture2DObject> m_reflectDepthTexture;
 
     std::shared_ptr<FramebufferObject> m_waterFramebuffer;

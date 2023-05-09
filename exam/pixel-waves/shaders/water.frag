@@ -8,7 +8,7 @@ in vec3 WorldNormal;
 in vec2 TexCoord;
 
 in vec4 ReflectedTexCoord;
-//in vec2 DepthTexCoord;
+in vec4 DepthTexCoord;
 
 in vec4 gl_FragCoord;
 
@@ -36,7 +36,7 @@ uniform float Height;
 uniform float Time;
 
 float near = 0.01; 
-float far  = 1000.0; 
+float far  = 100.0; 
 
 // Distortion settings
 uniform float DistortionStrength;
@@ -55,14 +55,14 @@ void main()
     vec2 reflectedTexCoord = (ReflectedTexCoord.xy / ReflectedTexCoord.w) / 2.0 + 0.5;
     
     // Output the depth texture coordinates
-    vec2 DepthTexCoord = (ReflectedTexCoord.xy / ReflectedTexCoord.w) / 2 + 0.5f;
+    vec2 depthTexCoord = (DepthTexCoord.xy / DepthTexCoord.w) / 2 + 0.5f;
 
-	float sceneDepth	= LinearizeDepth ( texture(DepthSampler, DepthTexCoord).r ) / far;
+	float sceneDepth	= LinearizeDepth ( texture(DepthSampler, depthTexCoord.xy).r ) / far;
 	float depth			= LinearizeDepth ( gl_FragCoord.z ) / far;
-	
+
 	float depthDifference = sceneDepth - depth;
 
-	if( depthDifference <= 0.00001 ) {
+	if( depthDifference <= 0.0001 ) {
 		FragColor = vec4(Color.rgb , 1.0) + vec4(0.3f);
 		return;
 	}

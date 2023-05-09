@@ -48,7 +48,7 @@ PixelWavesApplication::PixelWavesApplication()
     , m_saturation(1.4f)
     , m_colorFilter(1.0f)
     , m_pixelation(256.0f)
-    , m_downsampling(1.0f)
+    , m_downsampling(4.0f)
     , m_distortionSpeed(2.5f)
     , m_distortionStrength(0.0035f)
     , m_distortionFrequency(0.1f)
@@ -85,16 +85,15 @@ void PixelWavesApplication::Update()
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
     
-    auto viewMatrix = m_camera->GetViewMatrix();
-    
     glm::vec3 right, up, forward;
     m_camera->ExtractVectors(right, up, forward);
     glm::vec3 translation = glm::vec3(m_camera->ExtractTranslation());
-  
+
+    // Move camera from under the water height
     translation.y = - ( translation.y - waterHeight );
     forward = glm::reflect(forward, glm::vec3(0, 1 ,0) );
-    //up *= -1.0f;
 
+    // Update reflection camera
     m_reflectionCamera->SetViewMatrix(glm::lookAt(translation, forward, up) );
 
     // Add the scene nodes to the renderer
@@ -105,6 +104,34 @@ void PixelWavesApplication::Update()
         auto transform = m_scene.GetSceneNode("House")->GetTransform();
         transform->SetTranslation(glm::vec3(0.0f, 0.45f, 0.0f));
         placedModel = true;
+    }
+
+    {
+        auto gullTransform = m_scene.GetSceneNode("Gull")->GetTransform();
+        glm::vec3 position = gullTransform->GetTranslation();
+
+        float radius = 2.0f;
+        float birdAngle = m_currentTime * 0.7f;
+
+        position = glm::vec3(radius * sin(birdAngle), 1.8f + sin(birdAngle / 4.0f) / 2.0f, radius * cos(birdAngle));
+        gullTransform->SetTranslation(position);
+
+        glm::vec3 euler(0.0f, birdAngle + glm::radians(90.0f), -0.4f);
+        gullTransform->SetRotation(euler);
+    }
+
+    {
+        auto gullTransform = m_scene.GetSceneNode("Gull2")->GetTransform();
+        glm::vec3 position = gullTransform->GetTranslation();
+
+        float radius = 1.9f;
+        float birdAngle = -m_currentTime * 0.75f;
+
+        position = glm::vec3(radius * sin(birdAngle), 1.8f + sin(birdAngle / 4.0f) / 1.5f, radius * cos(birdAngle));
+        gullTransform->SetTranslation(position);
+
+        glm::vec3 euler(0.0f, birdAngle - glm::radians(90.0f), 0.4f);
+        gullTransform->SetRotation(euler);
     }
 }
 
@@ -135,10 +162,10 @@ void PixelWavesApplication::InitializeCamera()
     m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(5, 1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_camera->SetPerspectiveProjectionMatrix(45.0f, 1.0f, 0.01f, 1000.0f);
+    m_camera->SetPerspectiveProjectionMatrix(45.0f, 1.0f, 0.01f, 100.0f);
 
     m_reflectionCamera->SetViewMatrix(glm::vec3(5, -1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.01f, 1000.0f);
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.01f, 100.0f);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -449,6 +476,19 @@ void PixelWavesApplication::InitializeModels()
     // Load models
     std::shared_ptr<Model> houseModel = loader.LoadShared("models/house/House.obj");
     m_scene.AddSceneNode(std::make_shared<SceneModel>("House", houseModel));
+
+    std::shared_ptr<Model> gullModel = loader.LoadShared("models/gull/gull.obj");
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("Gull", gullModel));
+
+    std::shared_ptr<Model> gullModel2 = loader.LoadShared("models/gull/gull.obj");
+    m_scene.AddSceneNode(std::make_shared<SceneModel>("Gull2", gullModel2));
+
+    //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
+    auto gullTransform = m_scene.GetSceneNode("Gull")->GetTransform();
+    gullTransform->SetScale(glm::vec3(.01f));
+
+    auto gullTransform2 = m_scene.GetSceneNode("Gull2")->GetTransform();
+    gullTransform2->SetScale(glm::vec3(.008f));
     
     // Water
     //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
@@ -532,7 +572,6 @@ void PixelWavesApplication::InitializeWaterMesh()
         vertexFormat.LayoutBegin( static_cast<int>(vertices.size() ), 
         true /* interleaved */
     ), vertexFormat.LayoutEnd());
-
 }
 
 void PixelWavesApplication::InitializeFramebuffers()
@@ -603,9 +642,9 @@ void PixelWavesApplication::InitializeRenderer()
     // Reflection pass
     {
         // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_reflectSceneFramebuffer));
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_reflectSceneFramebuffer));
 
-        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true));
+        std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true, m_reflectionCamera));
 
         // Set the g-buffer textures as properties of the deferred material
         m_invDeferredMaterial->SetUniformValue("DepthTexture", gbufferRenderPass->GetDepthTexture());
@@ -621,7 +660,7 @@ void PixelWavesApplication::InitializeRenderer()
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_reflectSceneFramebuffer, true));
 
         // Flip camera
-        m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_reflectSceneFramebuffer));
+        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_reflectSceneFramebuffer));
 
         // Scene Texture
         m_reflectSceneTexture = std::make_shared<Texture2DObject>();
@@ -640,8 +679,6 @@ void PixelWavesApplication::InitializeRenderer()
         m_reflectSceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
         FramebufferObject::Unbind();
 
-        // Skybox pass
-        //m_renderer.AddRenderPass(std::make_unique<SkyboxRenderPass>(m_skyboxTexture, m_reflectSceneFramebuffer));
     }
 
     // Set up deferred pass ( Refraction )
@@ -695,6 +732,30 @@ void PixelWavesApplication::InitializeRenderer()
 
         m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(m_composeMaterial, m_renderer.GetDefaultFramebuffer()));
     }
+}
+
+std::shared_ptr<Material> PixelWavesApplication::CreateCombineMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture)
+{
+    // We could keep this vertex shader and reuse it, but it looks simpler this way
+    std::vector<const char*> vertexShaderPaths;
+    vertexShaderPaths.push_back("shaders/version330.glsl");
+    vertexShaderPaths.push_back("shaders/renderer/fullscreen.vert");
+    Shader vertexShader = ShaderLoader(Shader::VertexShader).Load(vertexShaderPaths);
+
+    std::vector<const char*> fragmentShaderPaths;
+    fragmentShaderPaths.push_back("shaders/version330.glsl");
+    fragmentShaderPaths.push_back("shaders/utils.glsl");
+    fragmentShaderPaths.push_back(fragmentShaderPath);
+    Shader fragmentShader = ShaderLoader(Shader::FragmentShader).Load(fragmentShaderPaths);
+
+    std::shared_ptr<ShaderProgram> shaderProgramPtr = std::make_shared<ShaderProgram>();
+    shaderProgramPtr->Build(vertexShader, fragmentShader);
+
+    // Create material
+    std::shared_ptr<Material> material = std::make_shared<Material>(shaderProgramPtr);
+    material->SetUniformValue("SourceTexture", sourceTexture);
+
+    return material;
 }
 
 std::shared_ptr<Material> PixelWavesApplication::CreatePostFXMaterial(const char* fragmentShaderPath, std::shared_ptr<Texture2DObject> sourceTexture)
@@ -774,7 +835,7 @@ void PixelWavesApplication::RenderGUI()
             {
                 m_composeMaterial->SetUniformValue("Saturation", m_saturation);
             }
-            if (ImGui::SliderFloat("Sharpness", &m_sharpness, 0.0f, 2.0f))
+            if (ImGui::SliderFloat("Sharpness", &m_sharpness, 0.0f, 4.0f))
             {
                 m_composeMaterial->SetUniformValue("Sharpness", m_sharpness);
             }
@@ -784,7 +845,6 @@ void PixelWavesApplication::RenderGUI()
             }
 
             ImGui::Separator();
-
 
             if (ImGui::RadioButton("1x", &m_downsampling, 1)) {
                 m_composeMaterial->SetUniformValue("Downsampling", m_downsampling);
@@ -824,7 +884,7 @@ void PixelWavesApplication::RenderGUI()
     {
         if (m_waterMaterial)
         {
-            if (ImGui::DragFloat("Speed", &m_distortionSpeed, 0.01f, 1.0f, 10.0f))
+            if (ImGui::DragFloat("Speed", &m_distortionSpeed, 0.1f, 1.0f, 10.0f))
             {
                 m_waterMaterial->SetUniformValue("DistortionSpeed", m_distortionSpeed);
             }

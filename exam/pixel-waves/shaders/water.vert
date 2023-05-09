@@ -8,12 +8,9 @@ out vec3 WorldNormal;
 
 out vec4 ReflectedTexCoord;
 out vec2 TexCoord;
-out vec2 DepthTexCoord;
-
-out vec4 ClipSpace;
+out vec4 DepthTexCoord;
 
 uniform mat4 MirrorViewMatrix;
-
 uniform mat4 DepthWorldMatrix;
 
 uniform mat4 ViewProjMatrix;
@@ -46,5 +43,8 @@ void main()
     
     // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
     ReflectedTexCoord = MirrorViewMatrix * vec4(WorldPosition, 1.0);
+    
+    //DepthTexCoord = ViewProjMatrix * vec4(WorldPosition, 1.0);
+    DepthTexCoord = ReflectedTexCoord;
 
 }
