@@ -122,13 +122,13 @@ protected:
     // Check if this TextureObject is currently bound to this target
     inline bool IsBound() const override { return s_boundHandle == GetHandle(); }
 
+#endif
     // Handle of the TextureObject that is currently bound to this target
     static Handle s_boundHandle;
-#endif
 };
 
 template<TextureObject::Target T>
-Object::Handle TextureObjectBase<T>::s_boundHandle = Object::NullHandle;
+    Object::Handle TextureObjectBase<T>::s_boundHandle = Object::NullHandle;
 
 template<TextureObject::Target T>
 void TextureObjectBase<T>::Bind() const

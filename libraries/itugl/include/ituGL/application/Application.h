@@ -1,5 +1,4 @@
 #pragma once
-
 #include <ituGL/core/DeviceGL.h>
 #include <ituGL/application/Window.h>
 #include <string>

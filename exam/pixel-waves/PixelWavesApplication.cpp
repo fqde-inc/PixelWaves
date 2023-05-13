@@ -48,10 +48,12 @@ PixelWavesApplication::PixelWavesApplication()
     , m_saturation(1.4f)
     , m_colorFilter(1.0f)
     , m_pixelation(256.0f)
-    , m_downsampling(4.0f)
+    , m_downsampling(4)
     , m_distortionSpeed(2.5f)
     , m_distortionStrength(0.0035f)
     , m_distortionFrequency(0.1f)
+    , nearPlane(0.01f)
+    , farPlane(100.0f)
 {
 }
 
@@ -80,7 +82,7 @@ void PixelWavesApplication::Update()
 
     // WaterHeight
     const float pi = 3.1416f;
-    waterHeight = 0.0 + 0.05 * sin(2 * pi * GetCurrentTime() / 15.0f);
+    waterHeight = 0.05f * sin(2 * pi * GetCurrentTime() / 15.0f);
 
     // Update camera controller
     m_cameraController.Update(GetMainWindow(), GetDeltaTime());
@@ -525,7 +527,7 @@ void PixelWavesApplication::InitializeWaterMesh()
     std::vector<unsigned int> indices;
 
     // Grid scale to convert the entire grid to size 1x1
-    int size = 16.0f;
+    int size = 16;
     glm::vec2 pos = glm::vec2(size/2.0f);
     glm::vec2 scale(1.0f / (size - 1), 1.0f / (size - 1));
 
@@ -641,8 +643,6 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Reflection pass
     {
-        // Flip camera
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_reflectionCamera, m_reflectSceneFramebuffer));
 
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true, m_reflectionCamera));
 
@@ -658,9 +658,6 @@ void PixelWavesApplication::InitializeRenderer()
         // Add the render passes
         m_renderer.AddRenderPass(std::move(gbufferRenderPass));
         m_renderer.AddRenderPass(std::make_unique<DeferredRenderPass>(m_invDeferredMaterial, m_reflectSceneFramebuffer, true));
-
-        // Flip camera
-        //m_renderer.AddRenderPass(std::make_unique<ReflectionPass>(m_camera, m_reflectSceneFramebuffer));
 
         // Scene Texture
         m_reflectSceneTexture = std::make_shared<Texture2DObject>();
