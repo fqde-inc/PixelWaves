@@ -98,8 +98,8 @@ private:
     std::shared_ptr<FramebufferObject> m_waterFramebuffer;
     std::shared_ptr<Texture2DObject> m_waterDepthTexture;
 
-    std::array<std::shared_ptr<FramebufferObject>, 2> m_tempFramebuffers;
-    std::array<std::shared_ptr<Texture2DObject>, 2> m_tempTextures;
+    std::shared_ptr<FramebufferObject> m_tempFramebuffer;
+    std::shared_ptr<Texture2DObject> m_tempTexture;
 
     // Water configuration values
     float m_distortionFrequency;

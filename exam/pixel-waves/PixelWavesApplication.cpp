@@ -251,16 +251,6 @@ void PixelWavesApplication::InitializeMaterials()
 
     // Water material
     {
-        // Water texture
-        m_waterTexture = Texture2DLoader::LoadTextureShared("textures/water.png", TextureObject::FormatRGBA, TextureObject::InternalFormatRGBA);
-        m_waterTexture->Bind();
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
-        m_waterTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
-        m_waterTexture->GenerateMipmap();
-        Texture2DObject::Unbind();
-
         // Load and build shader
         std::vector<const char*> vertexShaderPaths;
         vertexShaderPaths.push_back("shaders/version330.glsl");
@@ -322,8 +312,6 @@ void PixelWavesApplication::InitializeMaterials()
         m_waterMaterial->SetUniformValue("DistortionSpeed", m_distortionSpeed);
         m_waterMaterial->SetUniformValue("DistortionStrength", m_distortionStrength);
         m_waterMaterial->SetUniformValue("DistortionFrequency", m_distortionFrequency);
-
-        m_waterMaterial->SetUniformValue("ColorTextureScale", glm::vec2(1.0f));
 
         m_waterMaterial->SetBlendEquation(Material::BlendEquation::Add);
         m_waterMaterial->SetBlendParams(Material::BlendParam::SourceAlpha, Material::BlendParam::OneMinusSourceAlpha);
@@ -491,11 +479,6 @@ void PixelWavesApplication::InitializeModels()
 
     auto gullTransform2 = m_scene.GetSceneNode("Gull2")->GetTransform();
     gullTransform2->SetScale(glm::vec3(.008f));
-    
-    // Water
-    //m_scene.AddSceneNode(std::make_shared<SceneModel>("water", m_waterModel));
-    //auto waterTransform = m_scene.GetSceneNode("water")->GetTransform();
-    //waterTransform->SetTranslation(glm::vec3(-2.0f, 0, -2.0f));
 }
 
 void PixelWavesApplication::InitializeWaterMesh()
@@ -608,30 +591,20 @@ void PixelWavesApplication::InitializeFramebuffers()
     m_waterDepthTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
     Texture2DObject::Unbind();
 
-    // Water framebuffer
-    m_waterFramebuffer = std::make_shared<FramebufferObject>();
-    m_waterFramebuffer->Bind();
-    //m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Depth, *m_waterDepthTexture);
-    //m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_waterTexture);
-    //m_waterFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
-    FramebufferObject::Unbind();
-
     // Add temp textures and frame buffers
-    for (int i = 0; i < m_tempFramebuffers.size(); ++i)
-    {
-        m_tempTextures[i] = std::make_shared<Texture2DObject>();
-        m_tempTextures[i]->Bind();
-        m_tempTextures[i]->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
-        m_tempTextures[i]->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
+    m_tempTexture = std::make_shared<Texture2DObject>();
+    m_tempTexture->Bind();
+    m_tempTexture->SetImage(0, width, height, TextureObject::FormatRGBA, TextureObject::InternalFormat::InternalFormatRGBA16F);
+    m_tempTexture->SetParameter(TextureObject::ParameterEnum::WrapS, GL_CLAMP_TO_EDGE);
+    m_tempTexture->SetParameter(TextureObject::ParameterEnum::WrapT, GL_CLAMP_TO_EDGE);
+    m_tempTexture->SetParameter(TextureObject::ParameterEnum::MinFilter, GL_NEAREST);
+    m_tempTexture->SetParameter(TextureObject::ParameterEnum::MagFilter, GL_NEAREST);
         
-        m_tempFramebuffers[i] = std::make_shared<FramebufferObject>();
-        m_tempFramebuffers[i]->Bind();
-        m_tempFramebuffers[i]->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_tempTextures[i]);
-        m_tempFramebuffers[i]->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
-    }
+    m_tempFramebuffer = std::make_shared<FramebufferObject>();
+    m_tempFramebuffer->Bind();
+    m_tempFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_tempTexture);
+    m_tempFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
+
     Texture2DObject::Unbind();
     FramebufferObject::Unbind();
 }
@@ -710,7 +683,7 @@ void PixelWavesApplication::InitializeRenderer()
         std::shared_ptr<Material> copyMaterial = CreatePostFXMaterial("shaders/postfx/copy.frag", m_sceneTexture);
 
         // Create a copy pass from m_sceneTexture to the first temporary texture
-        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffers[0]));
+        m_renderer.AddRenderPass(std::make_unique<PostFXRenderPass>(copyMaterial, m_tempFramebuffer));
 
         // Final pass
         m_composeMaterial = CreatePostFXMaterial("shaders/postfx/compose.frag", m_sceneTexture);
