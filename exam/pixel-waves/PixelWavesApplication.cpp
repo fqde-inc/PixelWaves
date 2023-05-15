@@ -19,7 +19,6 @@
 #include <ituGL/scene/SceneModel.h>
 #include <ituGL/geometry/Mesh.h>
 
-#include <ituGL/renderer/ReflectionPass.h>
 #include <ituGL/renderer/SkyboxRenderPass.h>
 #include <ituGL/renderer/WaterRenderPass.h>
 #include <ituGL/renderer/GBufferRenderPass.h>
@@ -164,10 +163,10 @@ void PixelWavesApplication::InitializeCamera()
     m_reflectionCamera = std::make_shared<Camera>();
 
     m_camera->SetViewMatrix(glm::vec3(5, 1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_camera->SetPerspectiveProjectionMatrix(45.0f, 1.0f, 0.01f, 100.0f);
+    m_camera->SetPerspectiveProjectionMatrix(45.0f, 1.0f, nearPlane, farPlane);
 
     m_reflectionCamera->SetViewMatrix(glm::vec3(5, -1.5, -3.5), glm::vec3(0.5f, 0.0f, 0), glm::vec3(0, 1, 0));
-    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, 0.01f, 100.0f);
+    m_reflectionCamera->SetPerspectiveProjectionMatrix(90.0f, 1.0f, nearPlane, farPlane);
 
     // Create a scene node for the camera
     std::shared_ptr<SceneCamera> sceneCamera = std::make_shared<SceneCamera>("camera", m_camera);
@@ -311,8 +310,9 @@ void PixelWavesApplication::InitializeMaterials()
 
         // Create material
         m_waterMaterial = std::make_shared<Material>(shaderProgramPtr, filteredUniforms);
+
         m_waterMaterial->SetUniformValue("Color", glm::vec4(0.137, 0.537, 0.855, 0.7f) );
-        m_waterMaterial->SetUniformValue("ColorTexture", m_waterTexture);
+
         m_waterMaterial->SetUniformValue("Height", 1.5f);
         m_waterMaterial->SetUniformValue("Speed", 1.5f);
         m_waterMaterial->SetUniformValue("Amplitude", 0.01f);
@@ -611,9 +611,9 @@ void PixelWavesApplication::InitializeFramebuffers()
     // Water framebuffer
     m_waterFramebuffer = std::make_shared<FramebufferObject>();
     m_waterFramebuffer->Bind();
-    m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Depth, *m_waterDepthTexture);
-    m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_waterTexture);
-    m_waterFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
+    //m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Depth, *m_waterDepthTexture);
+    //m_waterFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_waterTexture);
+    //m_waterFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
     FramebufferObject::Unbind();
 
     // Add temp textures and frame buffers
@@ -643,7 +643,6 @@ void PixelWavesApplication::InitializeRenderer()
 
     // Reflection pass
     {
-
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height, 0, true, m_reflectionCamera));
 
         // Set the g-buffer textures as properties of the deferred material
@@ -675,10 +674,9 @@ void PixelWavesApplication::InitializeRenderer()
         m_reflectSceneFramebuffer->SetTexture(FramebufferObject::Target::Draw, FramebufferObject::Attachment::Color0, *m_reflectSceneTexture);
         m_reflectSceneFramebuffer->SetDrawBuffers(std::array<FramebufferObject::Attachment, 1>({ FramebufferObject::Attachment::Color0 }));
         FramebufferObject::Unbind();
-
     }
 
-    // Set up deferred pass ( Refraction )
+    // Set up deferred pass ( Scene / Refraction )
     {
         std::unique_ptr<GBufferRenderPass> gbufferRenderPass(std::make_unique<GBufferRenderPass>(width, height));
 

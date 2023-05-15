@@ -28,12 +28,12 @@ void main()
 {
 	WorldPosition = (WorldMatrix * vec4(VertexPosition, 1.0)).xyz;
     
-	// Add water height and wave height
+	// Add water height and wave height for a small wavy effect
 	float k = 2 * 3.14f / Wavelength;
 	WorldPosition.y += Height + ( Amplitude * sin(k * ( WorldPosition.x - Time * Speed )) );
 
     // World normal
-	WorldNormal = ( WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
+	// WorldNormal = ( WorldViewMatrix * vec4(VertexNormal, 0.0)).xyz;
 
     // Output vertex position
 	gl_Position = WorldViewProjMatrix * vec4( WorldPosition, 1.0 );
@@ -43,8 +43,9 @@ void main()
     
     // Transform the vertex position to texture coordinates by multiplying it with the texture matrix
     ReflectedTexCoord = MirrorViewMatrix * vec4(WorldPosition, 1.0);
-    
-    //DepthTexCoord = ViewProjMatrix * vec4(WorldPosition, 1.0);
     DepthTexCoord = ReflectedTexCoord;
+    
+    // TODO : Use copy of scene texture, and recalculate coordinates
+    //DepthTexCoord = ViewProjMatrix * vec4(WorldPosition, 1.0);
 
 }
