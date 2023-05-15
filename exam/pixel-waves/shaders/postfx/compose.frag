@@ -7,14 +7,15 @@ out vec4 FragColor;
 //Uniforms
 uniform sampler2D SourceTexture;
 
-uniform float Exposure;
-
 uniform vec3 ColorFilter;
+
+uniform int Downsampling;
+
+uniform float Exposure;
 uniform float Contrast;
 uniform float HueShift;
 uniform float Saturation;
 uniform float Pixelation;
-uniform int Downsampling;
 uniform float Sharpness;
 
 vec2 Resolution = vec2(1024,1024);
